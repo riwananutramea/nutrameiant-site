@@ -1,0 +1,14 @@
+{"name":"agyhub_summaries_proto.pb","sizeBytes":"5065"}
+{"name":"annotations","isDir":true}
+{"name":"antigravity_state.pbtxt","sizeBytes":"832"}
+{"name":"bin","isDir":true}
+{"name":"brain","isDir":true}
+{"name":"builtin","isDir":true}
+{"name":"conversations","isDir":true}
+{"name":"crashes","isDir":true}
+{"name":"installation_id","sizeBytes":"36"}
+{"name":"knowledge","isDir":true}
+{"name":"mcp","isDir":true}
+{"name":"scratch","isDir":true}
+
+Summary: This directory contains 9 subdirectories and 3 files.

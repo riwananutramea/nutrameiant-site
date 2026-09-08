@@ -1,0 +1,5 @@
+
+The command exited with code 127.
+Output:
+zsh:1: command not found: google-chrome
+

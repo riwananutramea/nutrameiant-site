@@ -1,0 +1,5 @@
+
+The command exited with code 1.
+Output:
+`--push` enabled but no commits found in /Users/riwana/.gemini/antigravity/brain/eb761f3c-fc89-4344-ad85-e44d64e83ea0
+
