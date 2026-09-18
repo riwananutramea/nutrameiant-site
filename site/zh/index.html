@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NutraMEA Int. | 中东膳食补充剂法规与贸易情报</title>
+<meta name="description" content="每周简报，覆盖九个中东与北非市场的补充剂注册、标签与进口规定。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/tokens.css">
+<link rel="stylesheet" href="../assets/site.css">
+</head>
+<body>
+<a class="btn btn-secondary skip-link" href="#main">跳到主要内容</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="../" aria-label="NutraMEA Int. 首页">
+      <svg viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg" role="img" aria-hidden="true" focusable="false">
+        <text class="logo-word" x="10" y="40" font-family="Inter, sans-serif" font-weight="600" font-size="32">Nutra</text>
+        <text class="logo-mark" x="105" y="40" font-family="Inter, sans-serif" font-weight="600" font-size="32">MEA</text>
+        <path class="logo-rule" d="M10 50 Q 100 60 180 45" stroke-width="3" stroke-linecap="round" fill="none"/>
+      </svg>
+    </a>
+
+    <button class="menu-toggle" type="button" id="menu-toggle" aria-expanded="false" aria-controls="site-nav">
+      <svg data-icon="open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h16"/>
+      </svg>
+      <svg data-icon="close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" hidden>
+        <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+      </svg>
+      <span class="visually-hidden">菜单</span>
+    </button>
+
+    <nav class="site-nav" id="site-nav" aria-label="主导航">
+      <a href="../brief/">每周简报</a>
+      <a href="../coverage/">覆盖范围</a>
+      <a href="../podcast/">播客</a>
+      <a href="../about/">关于我们</a>
+      <span class="lang">
+        <a href="../" lang="en">EN</a>
+        <a href="../ar/" lang="ar">عربي</a>
+        <a href="../zh/" lang="zh" aria-current="true">中文</a>
+      </span>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section aria-labelledby="hero-title">
+    <div class="wrap">
+      <h1 id="hero-title">海湾地区补充剂法规，每周追踪</h1>
+      <p class="lead measure">NutraMEA Int. 跟踪九个市场的产品注册、标签与进口规定。每周二一封简报，
+        并附一份带日期的记录：什么变了、发生在哪个市场、由哪个主管部门发布。</p>
+      <div class="actions">
+        <a class="btn" href="../access/">申请访问</a>
+        <a class="btn btn-secondary" href="../podcast/">收听播客</a>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="uses-title">
+    <div class="wrap">
+      <h2 id="uses-title">订阅者用它做什么</h2>
+      <ul class="blocks">
+        <li>
+          <h3>按单品查看注册状态</h3>
+          <p>以 CSV 上传产品目录，查看每个市场的当前申报阶段，以及最近一次变更的日期。</p>
+        </li>
+        <li>
+          <h3>带日期的规定变更</h3>
+          <p>每一条通告、标签要求和进口条件都附有原始文件与生效日期，可以核查，而不必凭信任接受。</p>
+        </li>
+        <li>
+          <h3>谁在供应什么</h3>
+          <p>按品类整理的经销商与代工厂覆盖情况，让采购沟通从一份短名单开始。</p>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="coverage-title">
+    <div class="wrap">
+      <h2 id="coverage-title">覆盖范围</h2>
+      <dl class="coverage">
+        <dt>市场</dt>
+        <dd>沙特阿拉伯、阿联酋、卡塔尔、科威特、巴林、阿曼、约旦、埃及、摩洛哥</dd>
+        <dt>跟踪的主管部门</dt>
+        <dd>SFDA、MoHAP、迪拜市政厅、卡塔尔公共卫生部、科威特卫生部、巴林 NHRA、阿曼卫生部、JFDA、EDA、ONSSA</dd>
+        <dt>简报</dt>
+        <dd>海湾标准时间每周二上午发布</dd>
+        <dt>播客</dt>
+        <dd>NutraMEA Show，每月两期</dd>
+      </dl>
+    </div>
+  </section>
+
+  <section aria-labelledby="subscribe-title">
+    <div class="wrap">
+      <h2 id="subscribe-title">订阅周二简报</h2>
+      <p class="lead measure">每周一封邮件，覆盖上述九个市场的注册与标签变更，并附出处。
+        该邮箱不会收到其他邮件。</p>
+  <form class="subscribe" id="subscribe-form" action="https://nutrameaint.com/wp-json/nutramea/v1/subscribe" method="post" novalidate>
+    <label class="visually-hidden" for="email">工作邮箱</label>
+    <input type="email" id="email" name="email" placeholder="name@company.com" autocomplete="email" required
+           aria-describedby="email-error">
+    <button class="btn" type="submit" id="subscribe-button" data-sending="提交中">订阅</button>
+    <p class="field-error" id="email-error" role="alert" hidden>请输入有效的工作邮箱，例如 name@company.com。</p>
+    <p class="form-status" id="subscribe-status" role="status" data-ok="已订阅。下一期简报将在周二发出。" data-failed="提交未成功。请发邮件至 hi@nutrameaint.com，我们会手动添加。" hidden></p>
+  </form>
+      <p class="lead measure">平台的完整页面目前仅提供英文版本。</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>NutraMEA Intelligence，迪拜。面向膳食补充剂行业的贸易情报。</p>
+    <nav class="footer-links" aria-label="页脚链接">
+      <a href="../contact/">联系我们</a>
+      <a href="../privacy/">隐私</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="../assets/nutramea.js" defer></script>
+</body>
+</html>
+

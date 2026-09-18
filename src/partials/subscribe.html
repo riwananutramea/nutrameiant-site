@@ -1,0 +1,8 @@
+  <form class="subscribe" id="subscribe-form" action="https://nutrameaint.com/wp-json/nutramea/v1/subscribe" method="post" novalidate>
+    <label class="visually-hidden" for="email">{{formLabel}}</label>
+    <input type="email" id="email" name="email" placeholder="name@company.com" autocomplete="email" required
+           aria-describedby="email-error">
+    <button class="btn" type="submit" id="subscribe-button" data-sending="{{formSending}}">{{formButton}}</button>
+    <p class="field-error" id="email-error" role="alert" hidden>{{formError}}</p>
+    <p class="form-status" id="subscribe-status" role="status" data-ok="{{formOk}}" data-failed="{{formFailed}}" hidden></p>
+  </form>

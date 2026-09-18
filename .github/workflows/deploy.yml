@@ -1,12 +1,13 @@
-name: Deploy NutraMEA site
+name: Build and deploy NutraMEA site
 
 on:
   push:
     branches: [ main ]
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,11 +15,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
-        working-directory: ./site
-        run: npm ci
-      - name: Build (noop)
-        working-directory: ./site
+      - name: Build pages from src/
+        run: npm run build
+      - name: Fail if committed pages are stale
+        run: git diff --exit-code -- site/ wordpress/
+      - name: Check site against DESIGN_RULES.md
+        run: ./tools/design-check.sh
+
+  deploy:
+    needs: check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Build pages from src/
         run: npm run build
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
