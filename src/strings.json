@@ -1,0 +1,125 @@
+{
+  "en": {
+    "dir": "ltr",
+    "skip": "Skip to content",
+    "menu": "Menu",
+    "navLabel": "Primary",
+    "footerLabel": "Footer",
+    "homeLabel": "NutraMEA Int. home",
+    "footerText": "NutraMEA Intelligence, Dubai. Trade intelligence for the nutraceutical sector.",
+    "contact": "Contact",
+    "privacy": "Privacy",
+    "nav": [
+      {
+        "key": "brief",
+        "href": "brief/",
+        "label": "Weekly brief"
+      },
+      {
+        "key": "coverage",
+        "href": "coverage/",
+        "label": "Coverage"
+      },
+      {
+        "key": "podcast",
+        "href": "podcast/",
+        "label": "Podcast"
+      },
+      {
+        "key": "about",
+        "href": "about/",
+        "label": "About"
+      }
+    ],
+    "form": {
+      "formLabel": "Work email",
+      "formButton": "Subscribe",
+      "formSending": "Sending",
+      "formError": "Enter a work email address, for example name@company.com.",
+      "formOk": "Subscribed. The next brief goes out on Tuesday.",
+      "formFailed": "That did not go through. Write to hello@nutrameaint.com and we will add you by hand."
+    }
+  },
+  "ar": {
+    "dir": "rtl",
+    "skip": "تخطي إلى المحتوى",
+    "menu": "القائمة",
+    "navLabel": "التنقل الرئيسي",
+    "footerLabel": "روابط أسفل الصفحة",
+    "homeLabel": "الصفحة الرئيسية لنيوتراميا",
+    "footerText": "نيوتراميا إنتليجنس، دبي. معلومات تجارية لقطاع المكملات الغذائية.",
+    "contact": "اتصل بنا",
+    "privacy": "الخصوصية",
+    "nav": [
+      {
+        "key": "brief",
+        "href": "brief/",
+        "label": "النشرة الأسبوعية"
+      },
+      {
+        "key": "coverage",
+        "href": "coverage/",
+        "label": "التغطية"
+      },
+      {
+        "key": "podcast",
+        "href": "podcast/",
+        "label": "البودكاست"
+      },
+      {
+        "key": "about",
+        "href": "about/",
+        "label": "عن المنصة"
+      }
+    ],
+    "form": {
+      "formLabel": "بريد العمل الإلكتروني",
+      "formButton": "اشترك",
+      "formSending": "جارٍ الإرسال",
+      "formError": "أدخل بريد عمل صالحًا، مثل name@company.com.",
+      "formOk": "تم الاشتراك. النشرة القادمة تصدر يوم الثلاثاء.",
+      "formFailed": "لم تنجح العملية. راسلنا على hello@nutrameaint.com وسنضيفك يدويًا."
+    }
+  },
+  "zh": {
+    "dir": "ltr",
+    "skip": "跳到主要内容",
+    "menu": "菜单",
+    "navLabel": "主导航",
+    "footerLabel": "页脚链接",
+    "homeLabel": "NutraMEA Int. 首页",
+    "footerText": "NutraMEA Intelligence，迪拜。面向膳食补充剂行业的贸易情报。",
+    "contact": "联系我们",
+    "privacy": "隐私",
+    "nav": [
+      {
+        "key": "brief",
+        "href": "brief/",
+        "label": "每周简报"
+      },
+      {
+        "key": "coverage",
+        "href": "coverage/",
+        "label": "覆盖范围"
+      },
+      {
+        "key": "podcast",
+        "href": "podcast/",
+        "label": "播客"
+      },
+      {
+        "key": "about",
+        "href": "about/",
+        "label": "关于我们"
+      }
+    ],
+    "form": {
+      "formLabel": "工作邮箱",
+      "formButton": "订阅",
+      "formSending": "提交中",
+      "formError": "请输入有效的工作邮箱，例如 name@company.com。",
+      "formOk": "已订阅。下一期简报将在周二发出。",
+      "formFailed": "提交未成功。请发邮件至 hello@nutrameaint.com，我们会手动添加。"
+    }
+  }
+}

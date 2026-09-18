@@ -1,5 +1,5 @@
 {
-  "summary": "CI: design-rules check on every push and pull request, then deploy site/ from main",
+  "summary": "CI: build pages from src/, fail on stale output, run the design-rules check, then deploy site/ from main",
   "updatedAt": "2026-09-18T00:00:00Z",
   "userFacing": true
 }

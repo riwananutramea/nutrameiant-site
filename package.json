@@ -1,0 +1,11 @@
+{
+  "name": "nutrameiant-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "check": "node tools/build.mjs && ./tools/design-check.sh",
+    "start": "node tools/build.mjs && npx --yes http-server ./site -p 8080"
+  }
+}

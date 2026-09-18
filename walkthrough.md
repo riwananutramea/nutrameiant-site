@@ -1,50 +1,58 @@
-# Walkthrough: design rules installed, landing page rebuilt to them
+# Walkthrough: design rules, ten pages, and the WordPress bridge
 
-## What was done
+## The rules
 
-**`DESIGN_RULES.md`** is now the styling law for nutrameaint.com. It covers colour,
-depth, icons, typography and copy, motion, scale, layout, placeholder content and code
-craft, and it opens with a table binding each rule to this project's actual tokens.
-It applies to this repo and to the `nutramea-theme` WordPress theme.
+`DESIGN_RULES.md` is the styling law for nutrameaint.com. Colour, depth, icons,
+typography and copy, motion, scale, layout, placeholder content, code craft, and a
+checklist to run before calling anything finished. Section 0 binds each rule to this
+project's own tokens, so the rules resolve to values rather than to taste. `CLAUDE.md`
+points every future session at them before any markup gets written.
 
-**`CLAUDE.md`** points every future session at those rules before any markup or CSS is
-written, so the constraints survive past this conversation.
+`tools/design-check.sh` enforces the mechanical half: gradient text, blue to purple
+gradients, unmarked shadows, sparkle glyphs and emoji used as interface, em dashes in
+copy, the banned word list, hover scale above 1.02, durations over 300ms, font sizes
+outside 12 to 56px, spacing off the 4px grid, hardcoded colours, images without alt,
+clickable divs, and missing focus styles. It passes on all 13 site files and reports 15
+findings on a deliberately non-compliant probe page.
 
-**`tools/design-check.sh`** enforces the mechanical half of the rules: gradient text,
-blue to purple gradients, unmarked shadows, sparkle glyphs and emoji used as interface,
-em dashes in copy, the banned word list, hover scale above 1.02, durations over 300ms,
-font sizes outside the 12 to 56px range, spacing that is not a multiple of 4, hardcoded
-colours, images without alt, clickable divs, and missing focus styles. It runs in CI on
-every push and pull request, and deploy now waits on it.
+## The site
 
-**`site/assets/tokens.css`** is the single source of colour, radius, type scale and
-spacing. Pages import it. No page redeclares `:root`, and no element carries a raw hex
-value.
+Nine links in the nav and footer used to 404. All of them now resolve.
 
-**`site/index.html`** was a header stub with a comment where the page should be. It is
-now a real page: hero, what subscribers use it for, coverage, subscribe, footer. One
-accent on a neutral ground, no shadows, no gradients, Lucide menu icon inline at text
-size with no container behind it, 48px headline on desktop and 32px on mobile, section
-padding 64px desktop and 48px mobile, every spacing value a multiple of 4.
+Pages are generated from `src/` by `tools/build.mjs`: one layout, one set of locale
+strings, one shared subscribe form. Ten pages in three languages come out of it, and the
+header exists in exactly one file. Copying it ten times would have broken the reuse rule
+on the day the rule was written.
 
-**Removed**: `mobile_preview.html` and `nutrameiant_preview.html`. Both were byte
-duplicates of `site/index.html`. Three copies of one header is exactly what rule 9
-forbids, and only `site/` is deployed. Git history keeps them.
+- English: home, weekly brief, coverage, podcast, about, request access, contact, privacy
+- Arabic and Chinese: home, with the language switcher wired across all three
 
-## Verified
+The subscribe form has real states now. Invalid address blocks the request and shows the
+error. A valid one posts by fetch, disables the button, and reports success or failure.
+All three paths were tested against a local stand-in for the endpoint.
 
-- `tools/design-check.sh` passes on all four site files, and fails with 15 findings on a
-  deliberately non-compliant probe page.
-- Rendered in Chromium at 1280px and at mobile width. Menu disclosure, focus outlines
-  and subscribe validation behave.
+## The WordPress bridge
 
-## Still to do
+`wordpress/nutramea-design.php` is generated from the same stylesheets the static site
+uses, so the theme cannot drift from the repo. It carries the tokens inline and registers
+`POST /wp-json/nutramea/v1/subscribe`, storing addresses and emailing the admin, with a
+rate limit and an administrator-only CSV export. `wordpress/README.md` is the install
+guide: copy one block, paste at the bottom of `functions.php`, press Update File.
 
-- Copy is placeholder written to be specific rather than generic. The market and
-  authority lists are plausible but need your sign-off, and the product claims need to
-  match what the platform does today.
-- The subscribe form posts to `https://nutrameaint.com/wp-json/nutramea/v1/subscribe`.
-  That REST route has to be registered in `nutramea-theme` for the form to work.
-- `/brief/`, `/coverage/`, `/podcast/`, `/about/`, `/access/`, `/contact/`, `/privacy/`,
-  `/ar/` and `/zh/` are linked but not built yet.
-- Port the tokens and rules into `nutramea-theme` so the WordPress side matches.
+## CI
+
+The old workflow ran `npm ci` in `site/` with no lockfile present, so the deploy job
+would have failed on its install step. It now builds the pages, fails if the committed
+output is stale, runs the design check, and only then deploys.
+
+## What needs a human
+
+- **Copy is written, not verified.** Markets, authorities, product categories and the
+  claims about what the platform does are plausible and specific, but they are mine. Read
+  them before this goes public.
+- **`hello@nutrameaint.com`** is used across the contact, access and privacy pages. If
+  that mailbox does not exist, create it or tell me the real address.
+- **The privacy page** describes this site accurately today: no cookies, no analytics,
+  one third party (Google Fonts). Adding analytics later makes it wrong.
+- **Self-hosting Inter** would remove that last third party and the render-blocking
+  request. The font files could not be downloaded from this container.
