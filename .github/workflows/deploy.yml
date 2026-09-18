@@ -14,10 +14,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      # `npm test` runs the WordPress suite as well as the JavaScript one, so
+      # PHP has to be set up explicitly here. Ubuntu runners happen to ship a
+      # PHP today, but depending on that would make publishing break quietly
+      # the day it changes.
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
       - name: Verify before publishing
-        run: |
-          npm run lint:js
-          npm test
+        run: npm run check
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
