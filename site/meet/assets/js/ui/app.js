@@ -24,6 +24,8 @@ import {
 import { DeliveryService } from '../storage/delivery.js';
 import { TranscriptView } from './transcript-view.js';
 import { Toasts } from './toasts.js';
+import { decorateButton, swapButtonIcon, setButtonLabel, iconElement } from './icons.js';
+import { Tour, lobbyTour, callTour } from './tour.js';
 import {
   formatDuration, formatBytes, randomRoomName, slugifyRoom, uid, downloadBlob, throttle,
 } from '../core/util.js';
@@ -50,6 +52,7 @@ export class MeetApp {
     this.segments = [];
     this.uploadAbort = null;
     this.clockTimer = null;
+    this.tour = new Tour({ logger: this.log });
   }
 
   async init() {
@@ -73,6 +76,7 @@ export class MeetApp {
     await this.#offerRecovery();
     this.#prefillLobby();
     this.#showScreen('lobby');
+    this.#runTour(lobbyTour, 'lobby-v1');
     this.log.info('ready', { provider: this.config.provider });
   }
 
@@ -89,6 +93,8 @@ export class MeetApp {
       notesToggle: $('#enable-notes'),
       notesEngine: $('#notes-engine'),
       notesEngineHint: $('#notes-engine-hint'),
+      notesEngineField: $('#notes-engine-field'),
+      helpButton: $('#help-button'),
       joinButton: $('#join-button'),
       newRoomButton: $('#new-room'),
       lobbyStatus: $('#lobby-status'),
@@ -118,6 +124,17 @@ export class MeetApp {
   #renderBranding() {
     for (const node of this.el.brandNames) node.textContent = this.config.brandName;
     document.title = `Meetings · ${this.config.brandShort}`;
+
+    // Icons are added in JS so the markup stays readable and the icon set has
+    // exactly one definition. Labels are always kept beside them.
+    decorateButton(this.el.recordButton, 'record', { size: 18 });
+    decorateButton(this.el.newRoomButton, 'refresh', { size: 17 });
+    decorateButton(this.el.copyLinkButton, 'link', { size: 18 });
+    decorateButton(this.el.notesPanelToggle, 'notes', { size: 18 });
+    decorateButton(this.el.leaveButton, 'leave', { size: 18 });
+    decorateButton(this.el.audioOnlyButton, 'videoOff', { size: 18 });
+    decorateButton(this.el.helpButton, 'compass', { size: 17 });
+    this.el.participants.prepend(iconElement('users', { size: 16 }));
   }
 
   /** Tells the user up front what this browser can and cannot do. */
@@ -170,9 +187,8 @@ export class MeetApp {
     this.el.notesEngineHint.textContent = whole
       ? 'Transcribes every participant from the meeting audio. Notes begin when you start recording, and the model downloads once then works offline.'
       : 'Transcribes what you say into your own microphone. Other participants are not captured, because the call audio never reaches the microphone.';
-    const enabled = this.el.notesToggle.checked;
-    this.el.notesEngine.disabled = !enabled;
-    this.el.notesEngineHint.hidden = !enabled;
+    // Hiding the whole block is calmer than leaving a disabled control behind.
+    this.el.notesEngineField.hidden = !this.el.notesToggle.checked;
   }
 
   /** A recording interrupted by a crash is still on disk — offer it back. */
@@ -239,6 +255,11 @@ export class MeetApp {
     });
     this.el.notesEngine.addEventListener('change', () => this.#updateNotesEngineHint());
     this.el.notesToggle.addEventListener('change', () => this.#updateNotesEngineHint());
+    // Replays whichever tour matches the screen the user is currently on.
+    this.el.helpButton.addEventListener('click', () => {
+      const onCall = document.body.dataset.screen === 'call';
+      this.tour.start(onCall ? callTour : lobbyTour, { force: true });
+    });
   }
 
   #bindCallControls() {
@@ -248,13 +269,13 @@ export class MeetApp {
       const next = !this.resilience?.state.manual;
       this.resilience?.forceAudioOnly(next);
       this.el.audioOnlyButton.setAttribute('aria-pressed', String(next));
-      this.el.audioOnlyButton.textContent = next ? 'Video off (saving data)' : 'Audio-only mode';
+      setButtonLabel(this.el.audioOnlyButton, next ? 'Video off' : 'Audio only');
+      swapButtonIcon(this.el.audioOnlyButton, next ? 'video' : 'videoOff', { size: 18 });
     });
     this.el.copyLinkButton.addEventListener('click', () => this.#copyInvite());
-    this.el.notesPanelToggle.addEventListener('click', () => {
-      const open = this.el.sidePanel.classList.toggle('side-panel--open');
-      this.el.notesPanelToggle.setAttribute('aria-expanded', String(open));
-    });
+    this.el.notesPanelToggle.addEventListener('click', () => this.#toggleNotesPanel());
+    this.#bindSheetGestures();
+    this.#observeControlsHeight();
 
     this.bus.on('transport:participants', (list) => {
       this.el.participants.textContent = String(list.length);
@@ -290,6 +311,113 @@ export class MeetApp {
       this.el.recordSize.textContent = formatBytes(status.bytes);
     });
     this.bus.on('storage:warning', ({ message }) => this.toasts.warning(message));
+  }
+
+  /**
+   * Publishes the control bar's real height as `--controls-h`.
+   *
+   * Toasts and the notes sheet are both positioned off this value. On a phone
+   * the bar wraps to two rows and grows again while recording, so a constant
+   * here means overlays end up sitting on top of the controls. Measuring is
+   * the only way this stays correct at every width and in every state.
+   */
+  #observeControlsHeight() {
+    this.#trackHeight('.controls', '--controls-h');
+    this.#trackHeight('.topbar', '--topbar-h');
+  }
+
+  /**
+   * Keeps a CSS variable equal to an element's measured height.
+   *
+   * Overlays are positioned off these values. A hard-coded number silently
+   * goes wrong the moment the control bar wraps to two rows on a phone, or
+   * grows while recording — and the symptom is a toast sitting on top of a
+   * button, which is exactly what must never happen.
+   */
+  #trackHeight(selector, variable) {
+    const node = document.querySelector(selector);
+    if (!node) return;
+    let last = -1;
+    const apply = () => {
+      const height = Math.round(node.getBoundingClientRect().height);
+      // Writing the variable changes layout, which notifies the observer
+      // again. Without this guard that is an endless loop, reported by the
+      // browser as "ResizeObserver loop completed with undelivered
+      // notifications".
+      if (height <= 0 || height === last) return;
+      last = height;
+      document.documentElement.style.setProperty(variable, `${height}px`);
+    };
+    apply();
+    if (typeof ResizeObserver === 'function') {
+      // Defer the write out of the observation callback so the style change
+      // lands in the next frame rather than mid-cycle.
+      const observer = new ResizeObserver(() => requestAnimationFrame(apply));
+      observer.observe(node);
+      (this.observers ||= []).push(observer);
+    } else {
+      window.addEventListener('resize', apply, { passive: true });
+    }
+  }
+
+  #toggleNotesPanel(force = null) {
+    const open = force === null
+      ? this.el.sidePanel.classList.toggle('side-panel--open')
+      : this.el.sidePanel.classList.toggle('side-panel--open', force);
+    this.el.notesPanelToggle.setAttribute('aria-expanded', String(open));
+    return open;
+  }
+
+  /**
+   * Bottom-sheet gestures for phones.
+   *
+   * A sheet that can only be closed by the button that opened it feels stuck,
+   * so it also responds to a downward drag and to Escape. The drag threshold is
+   * generous: this sits under the thumb during a live call and an accidental
+   * dismissal is worse than a missed one.
+   */
+  #bindSheetGestures() {
+    const panel = this.el.sidePanel;
+    const handle = panel.querySelector('.sheet-handle');
+    if (!handle) return;
+
+    let startY = null;
+    const onStart = (event) => { startY = event.touches[0].clientY; };
+    const onMove = (event) => {
+      if (startY === null) return;
+      const delta = event.touches[0].clientY - startY;
+      if (delta > 0) panel.style.transform = `translateY(${delta}px)`;
+    };
+    const onEnd = (event) => {
+      if (startY === null) return;
+      const delta = (event.changedTouches[0]?.clientY ?? startY) - startY;
+      panel.style.transform = '';
+      startY = null;
+      if (delta > 90) this.#toggleNotesPanel(false);
+    };
+
+    handle.addEventListener('touchstart', onStart, { passive: true });
+    handle.addEventListener('touchmove', onMove, { passive: true });
+    handle.addEventListener('touchend', onEnd, { passive: true });
+    handle.addEventListener('click', () => this.#toggleNotesPanel(false));
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (panel.classList.contains('side-panel--open')) this.#toggleNotesPanel(false);
+    });
+  }
+
+  /**
+   * Runs a tour once the screen has settled.
+   *
+   * Coach marks are positioned from live geometry, so they must not be measured
+   * mid-transition or they land beside the wrong control.
+   */
+  #runTour(steps, key) {
+    setTimeout(() => {
+      if (this.tour.active) return;
+      this.tour.start(steps, { key });
+    }, 500);
   }
 
   #bindSummary() {
@@ -350,7 +478,8 @@ export class MeetApp {
     if (audioOnly) {
       this.resilience.forceAudioOnly(true);
       this.el.audioOnlyButton.setAttribute('aria-pressed', 'true');
-      this.el.audioOnlyButton.textContent = 'Video off (saving data)';
+      setButtonLabel(this.el.audioOnlyButton, 'Video off');
+      swapButtonIcon(this.el.audioOnlyButton, 'video', { size: 18 });
     }
 
     this.recorder = new MeetingRecorder({
@@ -388,7 +517,8 @@ export class MeetApp {
     this.el.joinButton.disabled = false;
     this.#showScreen('call');
     this.#startClock();
-    this.toasts.success(`You are in "${room}". Share the invite link to bring others in.`, { timeoutMs: 8000 });
+    this.#runTour(callTour, 'call-v1');
+    this.toasts.success(`You are in "${room}". Use Invite to bring the other person in.`, { timeoutMs: 8000 });
   }
 
   async #startNotes({ audioStream = null } = {}) {
@@ -480,7 +610,8 @@ export class MeetApp {
       }
 
       document.body.dataset.recording = 'true';
-      this.el.recordButton.textContent = 'Stop recording';
+      setButtonLabel(this.el.recordButton, 'Stop');
+      swapButtonIcon(this.el.recordButton, 'stop', { size: 18 });
       this.el.recordState.textContent = 'Recording';
       this.toasts.success('Recording started.');
 
@@ -511,7 +642,8 @@ export class MeetApp {
     try {
       this.recordingResult = await this.recorder.stop();
       document.body.dataset.recording = 'false';
-      this.el.recordButton.textContent = 'Record';
+      setButtonLabel(this.el.recordButton, 'Record');
+      swapButtonIcon(this.el.recordButton, 'record', { size: 18 });
       this.el.recordState.textContent = 'Saved';
       if (this.store) {
         await this.store.patchSession(this.session.id, { recordingState: 'complete' }).catch(() => {});
@@ -532,6 +664,8 @@ export class MeetApp {
 
     if (this.clockTimer) clearInterval(this.clockTimer);
     this.clockTimer = null;
+    this.tour.finish({ silent: true });
+    this.#toggleNotesPanel(false);
 
     if (this.recorder?.isRecording) {
       this.toasts.info('Finishing the recording…');
@@ -667,11 +801,12 @@ export class MeetApp {
     container.replaceChildren();
     const base = this.session?.baseName || exportBaseName('meeting', Date.now());
 
-    const addButton = (label, handler, variant = 'ghost') => {
+    const addButton = (label, handler, variant = 'ghost', icon = null) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = `button button--${variant}`;
       button.textContent = label;
+      if (icon) decorateButton(button, icon, { size: 17 });
       button.addEventListener('click', () => {
         Promise.resolve(handler(button)).catch((error) => {
           this.log.error(`action "${label}" failed`, error);
@@ -684,10 +819,10 @@ export class MeetApp {
 
     if (this.recordingResult) {
       if (this.recordingResult.kind !== 'file') {
-        addButton('Download recording', () => this.delivery.download(this.recordingResult, `${base}.webm`), 'primary');
+        addButton('Download recording', () => this.delivery.download(this.recordingResult, `${base}.webm`), 'primary', 'download');
       }
       if (this.delivery.driveAvailable) {
-        addButton('Save to Google Drive', (button) => this.#uploadToDrive(button, base), 'primary');
+        addButton('Save to Google Drive', (button) => this.#uploadToDrive(button, base), 'primary', 'cloud');
       }
     }
 
@@ -695,27 +830,27 @@ export class MeetApp {
       addButton('Copy notes', async () => {
         await navigator.clipboard.writeText(notesToMarkdown(this.notes));
         this.toasts.success('Notes copied to the clipboard.');
-      });
-      addButton('Download notes (.md)', () => {
+      }, 'ghost', 'copy');
+      addButton('Notes (.md)', () => {
         downloadBlob(new Blob([notesToMarkdown(this.notes)], { type: 'text/markdown' }), `${base}-notes.md`);
-      });
-      addButton('Download transcript (.txt)', () => {
+      }, 'ghost', 'notes');
+      addButton('Transcript (.txt)', () => {
         const text = transcriptToText(this.segments, { title: this.notes.title });
         downloadBlob(new Blob([text], { type: 'text/plain' }), `${base}-transcript.txt`);
-      });
-      addButton('Download subtitles (.vtt)', () => {
+      }, 'ghost', 'download');
+      addButton('Subtitles (.vtt)', () => {
         downloadBlob(new Blob([transcriptToVtt(this.segments)], { type: 'text/vtt' }), `${base}.vtt`);
-      });
-      addButton('Download data (.json)', () => {
+      }, 'ghost', 'download');
+      addButton('Data (.json)', () => {
         const json = bundleToJson(this.notes, this.segments);
         downloadBlob(new Blob([json], { type: 'application/json' }), `${base}.json`);
-      });
+      }, 'ghost', 'download');
     }
 
     addButton('Diagnostics', () => {
       const diagnostics = this.log.diagnostics({ session: this.session, config: { provider: this.config.provider } });
       downloadBlob(new Blob([JSON.stringify(diagnostics, null, 2)], { type: 'application/json' }), `${base}-diagnostics.json`);
-    });
+    }, 'ghost', 'shield');
   }
 
   async #uploadToDrive(button, base) {
@@ -776,7 +911,8 @@ export class MeetApp {
     this.transcriber = null;
     this.resilience = null;
     document.body.dataset.recording = 'false';
-    this.el.recordButton.textContent = 'Record';
+    setButtonLabel(this.el.recordButton, 'Record');
+    swapButtonIcon(this.el.recordButton, 'record', { size: 18 });
     this.el.recordState.textContent = 'Not recording';
     this.el.recordTimer.textContent = '00:00';
     this.el.recordSize.textContent = '';

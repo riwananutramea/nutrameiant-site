@@ -5,7 +5,10 @@
  * so everything user-facing goes through here instead.
  */
 
-const ICONS = { info: 'i', success: '✓', warning: '!', error: '×' };
+import { iconElement } from './icons.js';
+
+/** Each severity gets its own glyph, so meaning survives without colour. */
+const ICONS = { info: 'info', success: 'check', warning: 'alert', error: 'alert' };
 
 export class Toasts {
   constructor(container) {
@@ -24,8 +27,7 @@ export class Toasts {
 
     const icon = document.createElement('span');
     icon.className = 'toast__icon';
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = ICONS[type] || ICONS.info;
+    icon.appendChild(iconElement(ICONS[type] || ICONS.info, { size: 20 }));
 
     const body = document.createElement('div');
     body.className = 'toast__body';
@@ -54,7 +56,7 @@ export class Toasts {
     close.type = 'button';
     close.className = 'toast__close';
     close.setAttribute('aria-label', 'Dismiss');
-    close.textContent = '×';
+    close.appendChild(iconElement('close', { size: 16 }));
     const id = key || `toast_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     close.addEventListener('click', () => this.dismiss(id));
     el.appendChild(close);

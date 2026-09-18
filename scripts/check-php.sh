@@ -16,7 +16,7 @@ while IFS= read -r -d '' file; do
     php -l "$file" || true
     failures=$((failures + 1))
   fi
-done < <(find wordpress -name '*.php' -print0)
+done < <(find theme -name '*.php' -print0)
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures PHP file(s) failed to parse"

@@ -6,9 +6,17 @@
  * recorded in the member's own browser and saved to their own computer or their
  * own Google Drive.
  *
- * This is theme source, not a marketplace plugin, and it is deliberately
- * self-contained: one require line in functions.php turns it on, removing that
- * line turns it off, and it touches no database table.
+ * THIS IS NOT A PLUGIN. It is theme source code.
+ *
+ *   - No plugin header, so it never appears on the Plugins screen.
+ *   - No activation or deactivation hook.
+ *   - No custom database table, no custom post type, no admin screen.
+ *   - One `require_once` line in functions.php turns it on. Deleting that line
+ *     turns it off completely.
+ *
+ * Everything is configured from code, through a single filter, so the feature
+ * lives in the repository and is reviewed like the rest of the theme rather
+ * than drifting in a settings screen.
  *
  * COST: zero, permanently. The call runs on a public Jitsi deployment that
  * needs no account and no API key, and recording happens client-side. No code

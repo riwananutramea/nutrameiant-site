@@ -77,6 +77,10 @@ it before clearing site data.
 
 ## 4. Install on nutrameaint.com
 
+This is theme code, not a plugin. Nothing is installed through the Plugins
+screen, nothing registers an activation hook, and no custom database table is
+created. Two files go into the theme and one line goes into `functions.php`.
+
 From this repository:
 
 1. Copy `site/meet/` into the theme as `nutramea-meet/`:
@@ -85,7 +89,7 @@ From this repository:
        index.html
        assets/...
    ```
-2. Copy `wordpress/nutramea-meetings.php` to:
+2. Copy `theme/nutramea-meetings.php` to:
    ```
    wp-content/themes/nutramea-theme/nutramea-meetings.php
    ```
