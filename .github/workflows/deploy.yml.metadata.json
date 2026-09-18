@@ -1,5 +1,5 @@
 {
-  "summary": "CI workflow to deploy NutraMEA static site",
-  "updatedAt": "2026-09-08T12:13:51.302836Z",
+  "summary": "CI: design-rules check on every push and pull request, then deploy site/ from main",
+  "updatedAt": "2026-09-18T00:00:00Z",
   "userFacing": true
 }

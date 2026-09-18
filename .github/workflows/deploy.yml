@@ -3,10 +3,20 @@ name: Deploy NutraMEA site
 on:
   push:
     branches: [ main ]
+  pull_request:
   workflow_dispatch:
 
 jobs:
+  design-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check site against DESIGN_RULES.md
+        run: ./tools/design-check.sh
+
   build-and-deploy:
+    needs: design-check
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

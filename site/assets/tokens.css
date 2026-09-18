@@ -1,0 +1,53 @@
+/* Single source of truth for NutraMEA visual tokens. See DESIGN_RULES.md section 0. */
+:root {
+  /* Ground and surfaces. One background step, no more. */
+  --bg: #0a0c0b;
+  --panel: #111512;
+
+  /* Text. One cool-neutral grey family. */
+  --text: #f3f5f3;
+  --muted: #98a099;
+
+  /* The one accent. Target under 10% of visible surface. */
+  --accent: #b9ff39;
+  --accent-hover: #a1e622;
+  --accent-ink: #0a0c0b;
+
+  /* Meaning only, never variety. */
+  --error: #ffaaa8;
+
+  /* The one border colour and the one radius. */
+  --line: rgba(255, 255, 255, 0.1);
+  --radius: 4px;
+
+  /* Type. Tahoma is an Arabic script fallback, not a second design family. */
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-ar: Tahoma, Arial, sans-serif;
+
+  /* Scale: 12 / 14 / 16 / 20 / 24 / 32 / 48. No sizes between steps. */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 20px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 48px;
+
+  /* Spacing, 4px base. Every margin, padding and gap is a multiple of 4. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Layout */
+  --measure: 68ch;
+  --measure-title: 26ch;
+  --content-max: 1180px;
+
+  /* Motion. Colour only on hover, nothing eases for half a second. */
+  --ease: 140ms ease-out;
+}
