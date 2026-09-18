@@ -72,13 +72,25 @@ t( 'the rewrite endpoint is registered on init', function () {
 	ok( in_array( 'meetings', $GLOBALS['wp_rewrite_endpoints'], true ), 'endpoint missing' );
 } );
 
-t( 'rewrite rules are flushed once, not on every request', function () {
+t( 'the front end never flushes rewrite rules', function () {
+	// The whole site regenerating its rewrite rules on ordinary page loads is
+	// what made sign-in slow enough to look broken. tests/php/auth-safety
+	// covers this in depth; this asserts the headline contract.
+	$GLOBALS['wp_is_admin'] = false;
 	do_action( 'wp_loaded' );
+	do_action( 'init' );
+	eq( $GLOBALS['wp_flush_count'], 0, 'a front-end request flushed rewrite rules' );
+} );
+
+t( 'an administrator registers the permalinks once', function () {
+	$GLOBALS['wp_is_admin'] = true;
+	do_action( 'admin_init' );
 	$after_first = $GLOBALS['wp_flush_count'];
-	do_action( 'wp_loaded' );
-	do_action( 'wp_loaded' );
-	eq( $GLOBALS['wp_flush_count'], $after_first, 'flushed more than once' );
-	ok( $after_first >= 1, 'never flushed' );
+	do_action( 'admin_init' );
+	do_action( 'admin_init' );
+	eq( $after_first, 1, 'should flush exactly once' );
+	eq( $GLOBALS['wp_flush_count'], 1, 'flushed again on later admin requests' );
+	$GLOBALS['wp_is_admin'] = false;
 } );
 
 /* ------------------------------------------------------------ account menu */

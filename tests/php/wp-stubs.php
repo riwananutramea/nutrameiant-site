@@ -100,7 +100,12 @@ function get_locale() { return 'en_US'; }
 function home_url( $path = '/' ) { return 'https://nutrameaint.com' . $path; }
 function wp_login_url( $redirect = '' ) { return 'https://nutrameaint.com/login/'; }
 function is_ssl() { return true; }
-function get_stylesheet_directory_uri() { return 'https://nutrameaint.com/wp-content/themes/nutramea-theme'; }
+function get_stylesheet_directory_uri() {
+	if ( $GLOBALS['wp_explode_on_app_url'] ) {
+		throw new RuntimeException( 'simulated theme URI failure' );
+	}
+	return 'https://nutrameaint.com/wp-content/themes/nutramea-theme';
+}
 function trailingslashit( $s ) { return rtrim( (string) $s, '/\\' ) . '/'; }
 function wp_json_encode( $data ) { return json_encode( $data ); }
 // Fixed salt so HMAC-derived room names are reproducible across runs.
@@ -119,9 +124,29 @@ function add_query_arg( $args, $url ) {
 	return $url . '?' . implode( '&', $parts );
 }
 
+/* ------------------------------------------------------ request context */
+
+$GLOBALS['wp_is_admin']   = false;
+$GLOBALS['wp_doing_ajax'] = false;
+$GLOBALS['wp_user_can']   = true;
+// Fault injection, so failure paths can be exercised rather than assumed.
+$GLOBALS['wp_flush_throws']         = false;
+$GLOBALS['wp_explode_on_app_url']   = false;
+$GLOBALS['wp_explode_on_menu']      = false;
+
+function is_admin() { return (bool) $GLOBALS['wp_is_admin']; }
+function wp_doing_ajax() { return (bool) $GLOBALS['wp_doing_ajax']; }
+function wp_doing_cron() { return defined( 'DOING_CRON' ) && DOING_CRON; }
+function current_user_can( $cap ) { return (bool) $GLOBALS['wp_user_can']; }
+
 function get_option( $k, $default = false ) { return $GLOBALS['wp_options'][ $k ] ?? $default; }
 function update_option( $k, $v, $autoload = null ) { $GLOBALS['wp_options'][ $k ] = $v; return true; }
-function flush_rewrite_rules( $hard = true ) { $GLOBALS['wp_flush_count']++; }
+function flush_rewrite_rules( $hard = true ) {
+	$GLOBALS['wp_flush_count']++;
+	if ( $GLOBALS['wp_flush_throws'] ) {
+		throw new RuntimeException( 'simulated rewrite flush failure' );
+	}
+}
 function add_rewrite_endpoint( $name, $places ) { $GLOBALS['wp_rewrite_endpoints'][] = $name; }
 
 function set_query_var_stub( $k, $v ) { $GLOBALS['wp_query_vars'][ $k ] = $v; }
@@ -150,6 +175,9 @@ $GLOBALS['wc_account_menu'] = array(
 $GLOBALS['wc_is_account_page'] = false;
 
 function wc_get_account_menu_items() {
+	if ( $GLOBALS['wp_explode_on_menu'] ) {
+		throw new RuntimeException( 'simulated account menu failure' );
+	}
 	return apply_filters( 'woocommerce_account_menu_items', $GLOBALS['wc_account_menu'] );
 }
 function wc_get_account_endpoint_url( $endpoint ) {

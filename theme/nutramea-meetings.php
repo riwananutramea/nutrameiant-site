@@ -45,9 +45,10 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 	 */
 	final class NutraMEA_Meetings {
 
-		const VERSION       = '1.0.0';
+		const VERSION       = '1.1.0';
 		const ENDPOINT      = 'meetings';
 		const APP_DIRECTORY = 'nutramea-meet';
+		const REWRITE_FLAG  = 'nutramea_meetings_rewrites';
 
 		/**
 		 * Singleton instance.
@@ -69,9 +70,54 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		}
 
 		/**
+		 * Requests this feature must never touch.
+		 *
+		 * Signing in, signing up and activating an account are the paths that
+		 * must work when everything else is broken. A meeting page is never
+		 * worth risking them, so on these requests this feature registers
+		 * nothing at all — there is no hook for it to misbehave through.
+		 *
+		 * Covers core's authentication entry points, plus the non-browser
+		 * request types where our work is pointless and a failure is hardest
+		 * to see: cron, XML-RPC and installation.
+		 *
+		 * @return bool
+		 */
+		public static function is_protected_request() {
+			if ( defined( 'WP_INSTALLING' ) && WP_INSTALLING ) {
+				return true;
+			}
+			if ( defined( 'XMLRPC_REQUEST' ) && XMLRPC_REQUEST ) {
+				return true;
+			}
+			if ( function_exists( 'wp_doing_cron' ) ? wp_doing_cron() : ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
+				return true;
+			}
+
+			// wp-login.php also serves registration, password reset and logout.
+			$script = '';
+			foreach ( array( 'SCRIPT_NAME', 'PHP_SELF', 'SCRIPT_FILENAME' ) as $key ) {
+				if ( ! empty( $_SERVER[ $key ] ) ) {
+					$script = basename( (string) wp_unslash( $_SERVER[ $key ] ) );
+					break;
+				}
+			}
+
+			return in_array(
+				$script,
+				array( 'wp-login.php', 'wp-signup.php', 'wp-activate.php', 'wp-register.php' ),
+				true
+			);
+		}
+
+		/**
 		 * Registers hooks.
 		 */
 		private function __construct() {
+			if ( self::is_protected_request() ) {
+				return;
+			}
+
 			add_action( 'init', array( $this, 'register_endpoint' ) );
 			add_filter( 'query_vars', array( $this, 'register_query_vars' ) );
 
@@ -83,6 +129,49 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 			add_shortcode( 'nutramea_meetings', array( $this, 'render_shortcode' ) );
 
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+
+			// Admin only, and never during AJAX. See maybe_flush_rewrites().
+			add_action( 'admin_init', array( $this, 'maybe_flush_rewrites' ) );
+		}
+
+		/**
+		 * Registers the permalink rules for /my-account/meetings/, once.
+		 *
+		 * `flush_rewrite_rules()` regenerates every rewrite rule on the site.
+		 * WordPress is explicit that it must not run on ordinary page loads.
+		 *
+		 * An earlier version of this file called it from `wp_loaded`, guarded
+		 * only by an option. That was wrong in a way worth spelling out: if the
+		 * option write ever failed to stick — a persistent object cache serving
+		 * a stale read, a momentarily read-only database — the guard never
+		 * closed and the site flushed its rewrite rules on EVERY request,
+		 * including sign-in. The symptom is not an error message; it is the
+		 * whole site becoming slow enough to look broken, login first.
+		 *
+		 * So: admin only, never during AJAX, and only for someone who could
+		 * have re-saved permalinks by hand anyway.
+		 */
+		public function maybe_flush_rewrites() {
+			if ( ! is_admin() ) {
+				return;
+			}
+			if ( function_exists( 'wp_doing_ajax' ) && wp_doing_ajax() ) {
+				return;
+			}
+			if ( function_exists( 'current_user_can' ) && ! current_user_can( 'manage_options' ) ) {
+				return;
+			}
+			if ( get_option( self::REWRITE_FLAG ) === self::VERSION ) {
+				return;
+			}
+
+			// Record the attempt BEFORE flushing. If the flush fails, the site
+			// is left with a 404 on one page — recoverable by re-saving
+			// permalinks. If the record fails, a retry loop degrades the whole
+			// site. The cheaper failure is the right one to accept.
+			update_option( self::REWRITE_FLAG, self::VERSION, false );
+			$this->register_endpoint();
+			flush_rewrite_rules( false );
 		}
 
 		/* ---------------------------------------------------------- dashboard */
@@ -103,6 +192,34 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		 * @return string
 		 */
 		public function render_dashboard() {
+			try {
+				return $this->build_dashboard();
+			} catch ( Throwable $error ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( 'NutraMEA dashboard render failed: ' . $error->getMessage() );
+				}
+				// Fall back to the greeting the member would otherwise have
+				// seen, rather than an empty account page.
+				return sprintf(
+					'<p>%s</p>',
+					esc_html(
+						sprintf(
+							/* translators: %s: member display name. */
+							__( 'Hello, %s', 'nutramea' ),
+							wp_get_current_user()->display_name
+						)
+					)
+				);
+			}
+		}
+
+		/**
+		 * The actual dashboard markup.
+		 *
+		 * @return string
+		 */
+		private function build_dashboard() {
 			if ( ! is_user_logged_in() ) {
 				return '';
 			}
@@ -390,11 +507,36 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		}
 
 		/**
-		 * Builds the markup.
+		 * Builds the markup, and can never take the page down with it.
+		 *
+		 * This renders inside My Account, a page a member may be relying on to
+		 * reach something else entirely. A fatal here would blank the whole
+		 * page, so any failure degrades to a short message and the rest of the
+		 * account area keeps working.
 		 *
 		 * @return string
 		 */
 		public function render() {
+			try {
+				return $this->render_frame();
+			} catch ( Throwable $error ) {
+				if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+					// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+					error_log( 'NutraMEA meetings render failed: ' . $error->getMessage() );
+				}
+				return sprintf(
+					'<p class="nutramea-meet__gate">%s</p>',
+					esc_html__( 'Meetings are temporarily unavailable. Everything else in your account is unaffected.', 'nutramea' )
+				);
+			}
+		}
+
+		/**
+		 * The actual markup.
+		 *
+		 * @return string
+		 */
+		private function render_frame() {
 			if ( ! is_user_logged_in() ) {
 				return sprintf(
 					'<div class="nutramea-meet__gate"><p>%s</p><p><a class="button" href="%s">%s</a></p></div>',
@@ -443,20 +585,8 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 	NutraMEA_Meetings::instance();
 }
 
-/**
- * Flushes rewrite rules once, so /my-account/meetings/ resolves without the
- * operator having to remember to re-save permalinks.
- *
- * Rewrite flushing is expensive, so this runs a single time per version.
+/*
+ * Permalink registration deliberately lives on `admin_init`, inside
+ * NutraMEA_Meetings::maybe_flush_rewrites(), NOT on a front-end hook.
+ * See that method for why.
  */
-add_action(
-	'wp_loaded',
-	function () {
-		$flag = 'nutramea_meetings_rewrites';
-		if ( get_option( $flag ) === NutraMEA_Meetings::VERSION ) {
-			return;
-		}
-		flush_rewrite_rules( false );
-		update_option( $flag, NutraMEA_Meetings::VERSION, false );
-	}
-);

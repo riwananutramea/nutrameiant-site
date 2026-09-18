@@ -254,7 +254,31 @@ technical events only — no transcript and no meeting content.
 
 ---
 
-## 9. Privacy and consent
+## 9. Sign-in, sign-up and activation are never touched
+
+Authentication is the one thing that must work when everything else is broken,
+so this feature registers **nothing at all** on those requests: `wp-login.php`
+(which also serves registration, password reset and logout), `wp-signup.php`,
+`wp-activate.php`, cron, XML-RPC and installation. There is no hook for it to
+misbehave through.
+
+Permalink registration runs on `admin_init` only, for a user who can manage
+options, once per version — never on a front-end request. An earlier version
+called `flush_rewrite_rules()` from `wp_loaded`, guarded only by an option
+write. If that write ever failed to stick — a stale object-cache read, a
+momentarily read-only database — the site regenerated every rewrite rule on
+**every** request. That does not surface as an error message; it surfaces as
+the site becoming slow enough to look broken, with sign-in the first casualty.
+
+Rendering is fail-safe too. A failure in the meeting page degrades to one line
+and leaves the rest of My Account working; a failure in the dashboard still
+greets the member. Neither can blank the page.
+
+`tests/php/auth-safety.test.php` locks all of this down, each case in its own
+PHP process so one request's decisions cannot leak into the next. Run against
+the pre-fix code, all fifteen fail.
+
+## 10. Privacy and consent
 
 - Recording requires an explicit confirmation, and a message is posted into the
   meeting chat announcing it. A red indicator stays visible throughout.
@@ -267,7 +291,7 @@ technical events only — no transcript and no meeting content.
 
 ---
 
-## 10. Running the tests
+## 11. Running the tests
 
 ```bash
 npm run check      # everything below
@@ -317,7 +341,7 @@ updates.
 Last verified against **WordPress 7.1.1** and **WooCommerce 11.1.1**:
 55 contract checks and 28 end-to-end checks, all passing.
 
-## 11. Why this architecture
+## 12. Why this architecture
 
 **Why not the call provider's recording API?** Every hosted option is metered
 or gated behind a paid plan — including Daily's local recording mode, which

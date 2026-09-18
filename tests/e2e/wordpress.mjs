@@ -50,6 +50,41 @@ page.on('console', (message) => {
 });
 
 try {
+  /* ------------------------------------------------- authentication paths */
+  // These must work when everything else is broken. This feature registers
+  // nothing at all on them (see tests/php/auth-safety.test.php); these checks
+  // confirm that holds on a real site with the feature active.
+  console.log('\nauthentication');
+  for (const [label, path] of [
+    ['the sign-in page loads', '/wp-login.php'],
+    ['password reset loads', '/wp-login.php?action=lostpassword'],
+    ['registration loads', '/wp-login.php?action=register'],
+    ['activation loads', '/wp-activate.php'],
+  ]) {
+    const response = await page.goto(`${BASE}${path}`, { waitUntil: 'domcontentloaded' });
+    const status = response?.status() ?? 0;
+    // Registration may be disabled by policy, which redirects rather than
+    // errors. A 5xx, or our markup appearing here, is the real failure.
+    const ours = await page.evaluate(() => Boolean(
+      document.querySelector('.nutramea-dash, .nutramea-meet, iframe.nutramea-meet__frame'),
+    ));
+    check(label, status < 500 && !ours, `status ${status}${ours ? ', our markup leaked onto an auth page' : ''}`);
+  }
+
+  const adminPage = await context.newPage();
+  await adminPage.goto(`${BASE}/wp-login.php`, { waitUntil: 'domcontentloaded' });
+  await adminPage.fill('#user_login', 'admin');
+  await adminPage.fill('#user_pass', 'adminpass123');
+  await adminPage.click('#wp-submit');
+  await adminPage.waitForLoadState('domcontentloaded');
+  await adminPage.goto(`${BASE}/wp-admin/`, { waitUntil: 'domcontentloaded' });
+  const inAdmin = await adminPage.evaluate(() => Boolean(
+    document.getElementById('adminmenu') || document.getElementById('wpadminbar'),
+  ));
+  check('an administrator can sign in and reach wp-admin', inAdmin, adminPage.url());
+  await adminPage.close();
+  await context.clearCookies();
+
   /* ------------------------------------------------------------- sign in */
   console.log(`\nSigning in at ${BASE}`);
   await page.goto(`${BASE}/wp-login.php`, { waitUntil: 'domcontentloaded' });

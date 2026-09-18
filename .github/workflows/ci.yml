@@ -37,6 +37,8 @@ jobs:
 
       # Executes the theme integration against WordPress stubs. Linting proves
       # a file parses; this proves the markup, the menu de-duplication and the
-      # escaping are right.
+      # escaping are right. Includes the authentication-safety suite, which
+      # asserts this feature registers nothing at all on sign-in, sign-up and
+      # activation requests.
       - name: Integration tests (WordPress)
         run: npm run test:php

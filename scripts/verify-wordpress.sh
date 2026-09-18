@@ -177,8 +177,30 @@ cat > router.php <<'RTEOF'
 // WordPress, which is what .htaccess does on a normal host.
 $path = parse_url( $_SERVER['REQUEST_URI'], PHP_URL_PATH );
 $file = __DIR__ . $path;
-if ( $path !== '/' && file_exists( $file ) && ! is_dir( $file ) ) { return false; }
-if ( is_dir( $file ) && file_exists( rtrim( $file, '/' ) . '/index.html' ) ) { return false; }
+
+// A real file (asset, wp-login.php, wp-admin/admin-ajax.php) is served as-is.
+if ( $path !== '/' && file_exists( $file ) && ! is_dir( $file ) ) {
+    return false;
+}
+
+// A directory containing its own index.php must run THAT file — otherwise
+// /wp-admin/ is served by the front-end index.php and never actually enters
+// the admin, which silently invalidates anything testing admin behaviour.
+if ( is_dir( $file ) ) {
+    if ( file_exists( rtrim( $file, '/' ) . '/index.html' ) ) {
+        return false;
+    }
+    $index = rtrim( $file, '/' ) . '/index.php';
+    if ( file_exists( $index ) && rtrim( $path, '/' ) !== '' ) {
+        $_SERVER['SCRIPT_NAME']     = rtrim( $path, '/' ) . '/index.php';
+        $_SERVER['PHP_SELF']        = $_SERVER['SCRIPT_NAME'];
+        $_SERVER['SCRIPT_FILENAME'] = $index;
+        chdir( dirname( $index ) );
+        require $index;
+        return true;
+    }
+}
+
 $_SERVER['SCRIPT_NAME'] = '/index.php';
 require __DIR__ . '/index.php';
 RTEOF
