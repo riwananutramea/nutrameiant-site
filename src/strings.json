@@ -37,7 +37,7 @@
       "formSending": "Sending",
       "formError": "Enter a work email address, for example name@company.com.",
       "formOk": "Subscribed. The next brief goes out on Tuesday.",
-      "formFailed": "That did not go through. Write to hello@nutrameaint.com and we will add you by hand."
+      "formFailed": "That did not go through. Write to hi@nutrameaint.com and we will add you by hand."
     }
   },
   "ar": {
@@ -78,7 +78,7 @@
       "formSending": "جارٍ الإرسال",
       "formError": "أدخل بريد عمل صالحًا، مثل name@company.com.",
       "formOk": "تم الاشتراك. النشرة القادمة تصدر يوم الثلاثاء.",
-      "formFailed": "لم تنجح العملية. راسلنا على hello@nutrameaint.com وسنضيفك يدويًا."
+      "formFailed": "لم تنجح العملية. راسلنا على hi@nutrameaint.com وسنضيفك يدويًا."
     }
   },
   "zh": {
@@ -119,7 +119,7 @@
       "formSending": "提交中",
       "formError": "请输入有效的工作邮箱，例如 name@company.com。",
       "formOk": "已订阅。下一期简报将在周二发出。",
-      "formFailed": "提交未成功。请发邮件至 hello@nutrameaint.com，我们会手动添加。"
+      "formFailed": "提交未成功。请发邮件至 hi@nutrameaint.com，我们会手动添加。"
     }
   }
 }

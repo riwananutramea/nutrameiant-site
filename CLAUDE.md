@@ -34,6 +34,18 @@ Edit `src/`, never `site/*.html`. Those files are build output and are overwritt
 
 `site/assets/` is hand written and is not generated. The build leaves it alone.
 
+## Podcast episodes
+
+`src/podcast.json` drives the podcast page. Adding an episode is one entry in `episodes`:
+`number`, `date`, `title`, `guest`, `summary`, `youtube` (the 11 character video id, not a
+URL) and optional `links` per platform. An empty `episodes` array renders the empty state.
+
+`platforms` holds the show URLs. A platform with an empty string is left out of the page
+rather than linked, because a link that 404s is worse than no link.
+
+Players load nothing from YouTube until someone presses play, and use the no cookie
+domain. The privacy page says so, so keep the two in step.
+
 ## WordPress
 
 `wordpress/nutramea-design.php` is generated. It carries the stylesheets inline and

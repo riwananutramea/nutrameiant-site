@@ -47,6 +47,7 @@
   --measure: 68ch;
   --measure-title: 26ch;
   --content-max: 1180px;
+  --player-max: 680px;
 
   /* Motion. Colour only on hover, nothing eases for half a second. */
   --ease: 140ms ease-out;

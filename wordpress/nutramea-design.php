@@ -68,6 +68,7 @@ function nutramea_design_styles() {
   --measure: 68ch;
   --measure-title: 26ch;
   --content-max: 1180px;
+  --player-max: 680px;
 
   /* Motion. Colour only on hover, nothing eases for half a second. */
   --ease: 140ms ease-out;
@@ -311,6 +312,33 @@ h3 {
 .coverage dt { color: var(--muted); }
 .coverage dd { color: var(--text); }
 
+/* Podcast */
+
+.lead + .label { margin-top: var(--space-6); }
+
+.listen { display: flex; flex-wrap: wrap; gap: var(--space-4); margin-top: var(--space-2); }
+
+.episodes { list-style: none; margin-top: var(--space-4); }
+
+.episode { padding: var(--space-8) 0; border-top: 1px solid var(--line); max-width: var(--player-max); }
+.episode:first-child { border-top: 0; padding-top: 0; }
+.episode h3 { margin-top: var(--space-1); }
+.episode p { margin-top: var(--space-2); color: var(--muted); font-size: var(--text-sm); }
+.episode .label { margin-top: 0; }
+
+.episode-guest { color: var(--text); }
+
+.player { margin-top: var(--space-4); }
+.player iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.episode-links { display: flex; gap: var(--space-4); }
+
 /* Subscribe */
 
 .subscribe { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
@@ -403,7 +431,7 @@ h3 {
 }
 NUTRAMEA_CSS;
 
-	wp_register_style( 'nutramea-design', false, array(), '719311035603' );
+	wp_register_style( 'nutramea-design', false, array(), 'e5d2cc8daa7f' );
 	wp_enqueue_style( 'nutramea-design' );
 	wp_add_inline_style( 'nutramea-design', $css );
 }

@@ -84,8 +84,27 @@
     });
   }
 
+  // Nothing is requested from YouTube until someone presses play.
+  function setupPlayers() {
+    var buttons = document.querySelectorAll('.play');
+
+    Array.prototype.forEach.call(buttons, function (button) {
+      button.addEventListener('click', function () {
+        var frame = document.createElement('iframe');
+        frame.src = 'https://www.youtube-nocookie.com/embed/' + encodeURIComponent(button.getAttribute('data-video')) + '?autoplay=1';
+        frame.title = button.getAttribute('data-title');
+        frame.allow = 'accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen';
+        frame.allowFullscreen = true;
+        frame.referrerPolicy = 'strict-origin-when-cross-origin';
+        button.parentNode.replaceChild(frame, button);
+        frame.focus();
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     setupMenu();
     setupSubscribe();
+    setupPlayers();
   });
 })();

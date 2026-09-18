@@ -28,6 +28,7 @@ function expandPartials(html, where) {
   });
 }
 const strings = JSON.parse(readFileSync(join(SRC, 'strings.json'), 'utf8'));
+const podcast = JSON.parse(readFileSync(join(SRC, 'podcast.json'), 'utf8'));
 const locales = Object.keys(strings);
 
 const LOCALE_NAMES = { en: 'EN', ar: 'عربي', zh: '中文' };
@@ -58,6 +59,61 @@ function langLinks(locale, base) {
       const active = code === locale ? ' aria-current="true"' : '';
       return `        <a href="${href}" lang="${code}"${active}>${LOCALE_NAMES[code]}</a>`;
     })
+    .join('\n');
+}
+
+const PLATFORM_NAMES = { youtube: 'YouTube', spotify: 'Spotify', apple: 'Apple Podcasts' };
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+// Only platforms with a real URL are listed. A link that 404s is worse than no link.
+function listenLinks() {
+  const live = Object.entries(podcast.platforms).filter(([, url]) => url);
+  if (live.length === 0) return '';
+
+  const items = live
+    .map(([key, url]) => `        <a href="${escapeHtml(url)}">${PLATFORM_NAMES[key]}</a>`)
+    .join('\n');
+
+  return `      <p class="label">Listen on</p>\n      <nav class="listen" aria-label="Listen on">\n${items}\n      </nav>`;
+}
+
+// The player loads nothing from YouTube until someone presses play. See the privacy page.
+function episodeList() {
+  if (podcast.episodes.length === 0) {
+    return `      <p class="lead measure">No episodes are published yet. They are listed here as they go
+        live, newest first, with the guest, a summary and a player that loads when you press play.</p>`;
+  }
+
+  return ['      <ol class="episodes">']
+    .concat(
+      podcast.episodes.map((episode) => {
+        const guest = episode.guest
+          ? `\n          <p class="episode-guest">${escapeHtml(episode.guest)}</p>`
+          : '';
+        const player = episode.youtube
+          ? `\n          <div class="player">\n            <button class="btn btn-secondary play" type="button" data-video="${escapeHtml(episode.youtube)}" data-title="${escapeHtml(episode.title)}">Play episode</button>\n          </div>`
+          : '';
+        const links = Object.entries(episode.links || {})
+          .filter(([, url]) => url)
+          .map(([key, url]) => `<a href="${escapeHtml(url)}">${PLATFORM_NAMES[key] || escapeHtml(key)}</a>`)
+          .join(' ');
+
+        return [
+          '        <li class="episode">',
+          `          <p class="label">Episode ${escapeHtml(episode.number)}, ${escapeHtml(episode.date)}</p>`,
+          `          <h3>${escapeHtml(episode.title)}</h3>${guest}`,
+          `          <p>${escapeHtml(episode.summary)}</p>${player}`,
+          links ? `          <p class="episode-links">${links}</p>` : '',
+          '        </li>',
+        ]
+          .filter(Boolean)
+          .join('\n');
+      })
+    )
+    .concat(['      </ol>'])
     .join('\n');
 }
 
@@ -96,6 +152,8 @@ function render(locale, name, source) {
     navLinks: navLinks(locale, base, meta.nav),
     langLinks: langLinks(locale, base),
     ...chrome.form,
+    listenLinks: listenLinks(),
+    episodes: episodeList(),
     body: '',
   };
 
