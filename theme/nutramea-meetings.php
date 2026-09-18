@@ -85,6 +85,79 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
 		}
 
+		/* ---------------------------------------------------------- dashboard */
+
+		/**
+		 * Renders the My Account landing page.
+		 *
+		 * Called from the theme's `woocommerce/myaccount/dashboard.php`
+		 * template, which REPLACES WooCommerce's own. Hooking onto
+		 * `woocommerce_account_dashboard` instead would append to the stock
+		 * "Hello {name}" boilerplate rather than replace it, leaving the page
+		 * with two greetings.
+		 *
+		 * The secondary links are read from the live account menu, so this can
+		 * never show a link to a section that does not exist, and never repeats
+		 * the one already featured above it.
+		 *
+		 * @return string
+		 */
+		public function render_dashboard() {
+			if ( ! is_user_logged_in() ) {
+				return '';
+			}
+
+			$user  = wp_get_current_user();
+			$first = $user->first_name ? $user->first_name : $user->display_name;
+
+			$links = '';
+			if ( function_exists( 'wc_get_account_menu_items' ) ) {
+				// Excluded: this page itself, logout, and the featured card.
+				$skip  = array( 'dashboard', 'customer-logout', self::ENDPOINT );
+				$items = array_diff_key( wc_get_account_menu_items(), array_flip( $skip ) );
+				foreach ( $items as $endpoint => $label ) {
+					$links .= sprintf(
+						'<a class="nutramea-dash__link" href="%s">%s</a>',
+						esc_url( wc_get_account_endpoint_url( $endpoint ) ),
+						esc_html( $label )
+					);
+				}
+			}
+
+			$meetings_url = function_exists( 'wc_get_account_endpoint_url' )
+				? wc_get_account_endpoint_url( self::ENDPOINT )
+				: home_url( '/my-account/' . self::ENDPOINT . '/' );
+
+			$html = sprintf(
+				'<div class="nutramea-dash">
+					<p class="nutramea-dash__eyebrow">%1$s</p>
+					<h2 class="nutramea-dash__greeting">%2$s</h2>
+
+					<section class="nutramea-dash__feature">
+						<h3>%3$s</h3>
+						<p>%4$s</p>
+						<a class="nutramea-dash__cta" href="%5$s">%6$s</a>
+					</section>',
+				esc_html__( 'Member dashboard', 'nutramea' ),
+				/* translators: %s: member first name. */
+				esc_html( sprintf( __( 'Hello, %s', 'nutramea' ), $first ) ),
+				esc_html__( 'Meetings', 'nutramea' ),
+				esc_html__( 'Private video calls with no time limit, recorded straight to your own computer. Notes, decisions and action items are written for you.', 'nutramea' ),
+				esc_url( $meetings_url ),
+				esc_html__( 'Start a meeting', 'nutramea' )
+			);
+
+			if ( '' !== $links ) {
+				$html .= sprintf(
+					'<nav class="nutramea-dash__links" aria-label="%s">%s</nav>',
+					esc_attr__( 'Account sections', 'nutramea' ),
+					$links
+				);
+			}
+
+			return $html . '</div>';
+		}
+
 		/* ------------------------------------------------------------ routing */
 
 		/**
@@ -114,6 +187,12 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		 * @return array
 		 */
 		public function add_account_menu_item( $items ) {
+			// Another part of the platform may already provide this entry.
+			// Adding a second one would put "Meetings" in the menu twice.
+			if ( isset( $items[ self::ENDPOINT ] ) ) {
+				return $items;
+			}
+
 			$logout = null;
 			if ( isset( $items['customer-logout'] ) ) {
 				$logout = $items['customer-logout'];
@@ -150,6 +229,9 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 				),
 				'brandName' => get_bloginfo( 'name' ),
 				'brandShort'=> 'NutraMEA Int.',
+				// The surrounding My Account page already shows the logo, the
+				// site name and a "Meetings" heading; the app drops its own.
+				'embedded'  => true,
 				'quality'   => 720,
 				'notes'     => array(
 					'enabled' => true,
@@ -241,6 +323,10 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 			if ( isset( $wp_query->query_vars[ self::ENDPOINT ] ) ) {
 				return true;
 			}
+			// The dashboard needs the same stylesheet.
+			if ( function_exists( 'is_account_page' ) && is_account_page() ) {
+				return true;
+			}
 			$post = get_post();
 			return $post instanceof WP_Post && has_shortcode( (string) $post->post_content, 'nutramea_meetings' );
 		}
@@ -252,6 +338,31 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		 */
 		private function wrapper_css() {
 			return '
+			.nutramea-dash{--nm-accent:#b9ff39;--nm-line:rgba(255,255,255,.1);
+				--nm-muted:#9aa39c;--nm-surface:rgba(255,255,255,.02)}
+			.nutramea-dash__eyebrow{display:flex;align-items:center;gap:.5rem;
+				font-size:.6875rem;font-weight:650;letter-spacing:.09em;
+				text-transform:uppercase;color:var(--nm-muted);margin:0 0 .75rem}
+			.nutramea-dash__eyebrow:before{content:"";width:14px;height:2px;
+				border-radius:1px;background:var(--nm-accent)}
+			.nutramea-dash__greeting{font-size:1.5rem;font-weight:650;
+				letter-spacing:-.02em;margin:0 0 1.75rem}
+			.nutramea-dash__feature{border:1px solid var(--nm-line);border-radius:14px;
+				padding:1.5rem;background:var(--nm-surface);margin-bottom:1.5rem}
+			.nutramea-dash__feature h3{font-size:1.0625rem;font-weight:650;margin:0 0 .5rem}
+			.nutramea-dash__feature p{margin:0 0 1.25rem;color:var(--nm-muted);
+				font-size:.9375rem;line-height:1.6;max-width:56ch}
+			.nutramea-dash__cta{display:inline-block;padding:.75rem 1.25rem;
+				background:var(--nm-accent);color:#0a0c0b;border-radius:10px;
+				font-weight:650;font-size:.9375rem;text-decoration:none}
+			.nutramea-dash__cta:hover{background:#cbff6b;color:#0a0c0b}
+			.nutramea-dash__links{display:flex;flex-wrap:wrap;gap:.5rem;
+				padding-top:1.25rem;border-top:1px solid var(--nm-line)}
+			.nutramea-dash__link{padding:.5rem .875rem;border:1px solid var(--nm-line);
+				border-radius:8px;font-size:.8125rem;font-weight:600;
+				color:inherit;text-decoration:none;opacity:.85}
+			.nutramea-dash__link:hover{opacity:1;border-color:rgba(255,255,255,.22)}
+			@media(max-width:620px){.nutramea-dash__cta{display:block;text-align:center}}
 			.nutramea-meet{margin:0 0 1.5rem}
 			.nutramea-meet__frame{width:100%;height:min(78vh,820px);min-height:560px;border:0;
 				border-radius:12px;background:#0a0c0b;display:block}

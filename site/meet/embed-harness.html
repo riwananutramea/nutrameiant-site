@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Embed harness (development fixture)</title>
+<meta name="robots" content="noindex,nofollow">
+<!-- Development fixture: reproduces the My Account embed so the app can be
+     checked in the context it actually ships in. Not part of the theme. -->
+<style>
+ body{margin:0;background:#0a0c0b;color:#f3f5f3;font-family:Inter,system-ui,sans-serif}
+ .site-header{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,.1)}
+ .site-header b{font-size:18px}.site-header b i{color:#b9ff39;font-style:normal}
+ .wrap{display:flex;gap:28px;padding:28px 24px;max-width:1200px;margin:0 auto}
+ nav{flex:0 0 190px;display:flex;flex-direction:column;gap:6px}
+ nav a{padding:9px 12px;border-radius:8px;color:#d8ddd9;text-decoration:none;font-size:14px}
+ nav a.on{background:rgba(185,255,57,.1);color:#b9ff39;font-weight:600}
+ main{flex:1;min-width:0} h1{font-size:22px;margin:0 0 18px}
+ iframe{width:100%;height:620px;border:0;border-radius:12px;background:#0a0c0b}
+</style></head><body>
+<div class="site-header"><b>Nutra<i>MEA</i></b><span style="opacity:.6;font-size:13px">Intelligence</span></div>
+<div class="wrap">
+  <nav><a href="#">Dashboard</a><a href="#" class="on">Meetings</a><a href="#">Orders</a><a href="#">Details</a><a href="#">Log out</a></nav>
+  <main><h1>Meetings</h1><iframe id="app" allow="camera;microphone;display-capture"></iframe></main>
+</div>
+<script>
+  // Mirrors what the theme file emits.
+  const cfg = btoa(JSON.stringify({ embedded: true }))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  document.getElementById('app').src = './index.html?cfg=' + cfg + '&name=Riwana';
+</script>
+</body></html>

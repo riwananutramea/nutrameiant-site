@@ -124,6 +124,8 @@ export class MeetApp {
   #renderBranding() {
     for (const node of this.el.brandNames) node.textContent = this.config.brandName;
     document.title = `Meetings · ${this.config.brandShort}`;
+    // Drives the CSS that strips duplicated chrome when embedded in My Account.
+    document.body.dataset.embedded = String(Boolean(this.config.embedded));
 
     // Icons are added in JS so the markup stays readable and the icon set has
     // exactly one definition. Labels are always kept beside them.

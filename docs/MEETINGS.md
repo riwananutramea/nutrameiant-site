@@ -93,11 +93,27 @@ From this repository:
    ```
    wp-content/themes/nutramea-theme/nutramea-meetings.php
    ```
-3. Add one line to the theme's `functions.php`:
+3. Copy `theme/woocommerce/myaccount/dashboard.php` to:
+   ```
+   wp-content/themes/nutramea-theme/woocommerce/myaccount/dashboard.php
+   ```
+   This replaces WooCommerce's generic "Hello {name}, from your account
+   dashboard you can view your recent orders…" page with a clean NutraMEA one.
+   Skip this file if you would rather keep the stock dashboard — everything
+   else works without it.
+4. Add one line to the theme's `functions.php`:
    ```php
    require_once get_stylesheet_directory() . '/nutramea-meetings.php';
    ```
-4. Visit **Settings → Permalinks** and press **Save Changes** once.
+5. Visit **Settings → Permalinks** and press **Save Changes** once.
+
+### Why a template file rather than a hook
+
+WooCommerce's dashboard template prints its own greeting and then fires
+`woocommerce_account_dashboard`. Hooking that action would **append** to the
+boilerplate, leaving the page greeting the member twice. Overriding the
+template replaces it, which is the documented WordPress way and stays theme
+code.
 
 **Meetings** now appears in the My Account menu at `/my-account/meetings/`.
 
@@ -105,6 +121,15 @@ Without WooCommerce, put `[nutramea_meetings]` on any page instead.
 
 The app is embedded in a same-origin iframe. That is deliberate: it keeps theme
 CSS from interfering with the meeting interface, and vice versa.
+
+Inside My Account the app runs in **embedded mode**: it hides its own logo,
+site name and section eyebrow, because the site header and the account
+navigation already provide all three. Opened directly, it shows them as normal.
+
+Two files under `site/meet/` are development fixtures, not part of the theme:
+`embed-harness.html` reproduces the My Account embed, and
+`dashboard-preview.html` renders the dashboard using the theme's own CSS so it
+can be reviewed without deploying.
 
 ### Requirements
 

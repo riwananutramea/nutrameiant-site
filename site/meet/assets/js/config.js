@@ -40,6 +40,15 @@ const DEFAULTS = {
   /* --------------------------------------------------------------- branding */
   brandName: 'NutraMEA Intelligence',
   brandShort: 'NutraMEA Int.',
+  /**
+   * True when the app runs inside another NutraMEA page (My Account).
+   *
+   * The surrounding page already carries the logo, the site name and the
+   * section heading, so repeating them inside the frame is pure duplication —
+   * the same brand stated three times in 200 pixels. In embedded mode the app
+   * drops its own chrome and keeps only what is functional.
+   */
+  embedded: false,
 
   /* ---------------------------------------------------------------- quality */
   // Sender resolution. 720p is the sweet spot: visibly crisp, and light enough
@@ -134,6 +143,7 @@ const QUERY_OVERRIDES = {
   name: String,
   lang: String,
   quality: Number,
+  embedded: (v) => v !== '0' && v !== 'false',
   audioOnly: (v) => v !== '0' && v !== 'false',
   debug: (v) => v !== '0' && v !== 'false',
 };

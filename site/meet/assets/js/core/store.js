@@ -39,7 +39,20 @@ export function isSupported() {
   return typeof indexedDB !== 'undefined';
 }
 
-export async function openDatabase(name = DB_NAME, version = DB_VERSION) {
+/**
+ * Opens the database, and gives up rather than hanging.
+ *
+ * `indexedDB.open()` can legitimately never settle: `onblocked` fires when
+ * another tab holds the database at an older version and neither success nor
+ * error follows, and a browser partitioning storage inside a third-party frame
+ * can leave the request pending indefinitely. Awaiting it unguarded means the
+ * meeting page never finishes starting and the member sees a blank screen —
+ * the worst possible failure, and one that hides its own cause.
+ *
+ * Losing this store is survivable: recording streams to disk instead, and only
+ * crash recovery is unavailable. Hanging is not survivable, so we time out.
+ */
+export async function openDatabase(name = DB_NAME, version = DB_VERSION, { timeoutMs = 4000 } = {}) {
   if (!isSupported()) throw new Error('IndexedDB is unavailable in this browser.');
   const request = indexedDB.open(name, version);
   request.onupgradeneeded = (event) => {
@@ -61,7 +74,27 @@ export async function openDatabase(name = DB_NAME, version = DB_VERSION) {
       // Future migrations hang here; v1 needs none.
     }
   };
-  return promisifyRequest(request);
+
+  // A single rejection channel shared by the timer and the blocked event, so
+  // either can abandon the open without waiting for the other.
+  let abandon;
+  const guard = new Promise((_, reject) => { abandon = reject; });
+  const timer = setTimeout(
+    () => abandon(new Error('Browser storage did not respond. It may be blocked by privacy settings.')),
+    timeoutMs,
+  );
+  // `blocked` means another tab holds an older version open. Neither success
+  // nor error will follow, so report it at once instead of waiting out the
+  // clock for a result that is never coming.
+  request.onblocked = () => abandon(
+    new Error('Browser storage is held open by another tab. Close other NutraMEA meeting tabs and reload.'),
+  );
+
+  try {
+    return await Promise.race([promisifyRequest(request), guard]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**

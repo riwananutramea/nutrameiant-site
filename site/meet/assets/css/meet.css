@@ -156,6 +156,26 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 .icon { flex: 0 0 auto; }
 
+/* ---------------------------------------------------------- embedded mode */
+
+/* Inside My Account the page already shows the NutraMEA logo, the site name
+   and a "Meetings" heading. Repeating any of that here is noise, so the brand
+   block and the section eyebrow are dropped and the bar keeps only live
+   status and the guide. */
+body[data-embedded="true"] .topbar__brand,
+body[data-embedded="true"] .lobby__eyebrow { display: none; }
+
+body[data-embedded="true"] .topbar {
+  justify-content: flex-end;
+  padding: var(--s2) var(--s4);
+  background: transparent;
+  /* No rule here: the host page's own heading already separates this section,
+     and a second line immediately under it reads as a seam. */
+  border-bottom: 0;
+}
+body[data-embedded="true"] .lobby { padding-top: var(--s6); }
+body[data-embedded="true"] .summary { padding-top: var(--s6); }
+
 /* --------------------------------------------------------------- micro-label */
 
 /* Small caps label with a short accent rule — the recurring motif that ties
