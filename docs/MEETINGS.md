@@ -34,9 +34,16 @@ An hour at 720p is roughly **540 MB**.
 
 ### Before a meeting that matters
 
-Do a two-minute rehearsal call with yourself on a phone. Record for thirty
-seconds, stop, and play the file back. You are checking one thing: that you can
-hear **both** voices. That confirms the tab-audio tick was applied.
+Press **Check my setup before a meeting** on the meetings page. It records six
+seconds through exactly the same capture the real recorder uses, then tells you
+what was and was not captured and plays the sample back.
+
+It exists for one reason: if the tab-audio tick is missed, the meeting sounds
+completely normal throughout and the problem is only discovered on playback,
+afterwards, when it cannot be fixed. The check surfaces it in six seconds
+instead.
+
+Run it once on the machine you will use, and listen to the playback.
 
 ---
 
@@ -223,7 +230,8 @@ browser's Network Information API with the call client's own adaptation.
 
 **"I can hear myself but not the other person in the recording."**
 Tab audio was not shared. Stop, press Record again, choose **This tab**, and
-tick **Also share tab audio**.
+tick **Also share tab audio**. Run **Check my setup** first next time — it
+catches exactly this.
 
 **Recording is greyed out.** You are not on a Chromium browser, or not on a
 desktop. The call still works — recording does not.
@@ -259,7 +267,25 @@ technical events only — no transcript and no meeting content.
 
 ---
 
-## 10. Why this architecture
+## 10. Running the tests
+
+```bash
+npm run check      # everything below
+npm run lint:js    # loads every module through the real ESM loader
+npm run lint:php   # parses every PHP file
+npm test           # JavaScript unit tests, then the WordPress suite
+```
+
+The WordPress suite (`tests/php/`) executes the theme integration against
+stubbed WordPress and WooCommerce functions and asserts on what it produces:
+hook registration, that the account menu never gains a second "Meetings" entry,
+that dashboard links never repeat the featured card, that a signed-out visitor
+gets a sign-in gate rather than the app, that the iframe carries the camera,
+microphone and display-capture permissions, that personal rooms are stable and
+not derivable from a member ID, and that a hostile display name cannot inject
+markup. Linting proves a file parses; this proves it behaves.
+
+## 11. Why this architecture
 
 **Why not the call provider's recording API?** Every hosted option is metered
 or gated behind a paid plan — including Daily's local recording mode, which

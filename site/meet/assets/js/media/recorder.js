@@ -54,6 +54,32 @@ export function fileExtensionFor(mimeType) {
   return String(mimeType || '').includes('mp4') ? 'mp4' : 'webm';
 }
 
+/**
+ * Tab-capture request options.
+ *
+ * Exported so the pre-flight check can capture through exactly the same call
+ * the real recorder uses. A setup test that exercises a different code path
+ * proves nothing about the recording that matters.
+ */
+export const DISPLAY_CAPTURE_OPTIONS = {
+  video: {
+    displaySurface: 'browser',
+    frameRate: { ideal: 30, max: 30 },
+  },
+  // The tab's audio is already processed by the call client; re-processing it
+  // here would double up and sound worse.
+  audio: {
+    echoCancellation: false,
+    noiseSuppression: false,
+    autoGainControl: false,
+  },
+  // Chromium hints that steer the picker toward "this tab".
+  preferCurrentTab: true,
+  selfBrowserSurface: 'include',
+  systemAudio: 'include',
+  surfaceSwitching: 'exclude',
+};
+
 export function isRecordingSupported() {
   return typeof MediaRecorder !== 'undefined'
     && typeof navigator?.mediaDevices?.getDisplayMedia === 'function'
@@ -161,24 +187,7 @@ export class MeetingRecorder {
 
   async #captureTab() {
     try {
-      this.displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: 'browser',
-          frameRate: { ideal: 30, max: 30 },
-        },
-        // The tab's own audio processing is already applied by the call client;
-        // re-processing it here would double up and sound worse.
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-        // Chromium hints that steer the picker toward "this tab".
-        preferCurrentTab: true,
-        selfBrowserSurface: 'include',
-        systemAudio: 'include',
-        surfaceSwitching: 'exclude',
-      });
+      this.displayStream = await navigator.mediaDevices.getDisplayMedia(DISPLAY_CAPTURE_OPTIONS);
     } catch (error) {
       if (error?.name === 'NotAllowedError') {
         throw new Error('Screen sharing permission was declined, so recording cannot start. Press Record again and choose "This tab".');

@@ -26,6 +26,7 @@ import { TranscriptView } from './transcript-view.js';
 import { Toasts } from './toasts.js';
 import { decorateButton, swapButtonIcon, setButtonLabel, iconElement } from './icons.js';
 import { Tour, lobbyTour, callTour } from './tour.js';
+import { PreflightDialog } from './preflight.js';
 import {
   formatDuration, formatBytes, randomRoomName, slugifyRoom, uid, downloadBlob, throttle,
 } from '../core/util.js';
@@ -95,6 +96,7 @@ export class MeetApp {
       notesEngineHint: $('#notes-engine-hint'),
       notesEngineField: $('#notes-engine-field'),
       helpButton: $('#help-button'),
+      preflightButton: $('#preflight-button'),
       joinButton: $('#join-button'),
       newRoomButton: $('#new-room'),
       lobbyStatus: $('#lobby-status'),
@@ -136,6 +138,7 @@ export class MeetApp {
     decorateButton(this.el.leaveButton, 'leave', { size: 18 });
     decorateButton(this.el.audioOnlyButton, 'videoOff', { size: 18 });
     decorateButton(this.el.helpButton, 'compass', { size: 17 });
+    decorateButton(this.el.preflightButton, 'shield', { size: 17 });
     this.el.participants.prepend(iconElement('users', { size: 16 }));
   }
 
@@ -168,7 +171,11 @@ export class MeetApp {
       li.textContent = item.text;
       this.el.capabilities.appendChild(li);
     }
-    if (!canRecord) this.el.recordButton.disabled = true;
+    if (!canRecord) {
+      this.el.recordButton.disabled = true;
+      // Nothing to check if recording is unavailable in the first place.
+      this.el.preflightButton.hidden = true;
+    }
 
     const notesConfigured = Boolean(this.config.notes?.enabled);
     // Whole-room notes only need a recording, not the Web Speech API, so the
@@ -258,6 +265,9 @@ export class MeetApp {
     this.el.notesEngine.addEventListener('change', () => this.#updateNotesEngineHint());
     this.el.notesToggle.addEventListener('change', () => this.#updateNotesEngineHint());
     // Replays whichever tour matches the screen the user is currently on.
+    this.el.preflightButton.addEventListener('click', () => {
+      new PreflightDialog({ logger: this.log }).open();
+    });
     this.el.helpButton.addEventListener('click', () => {
       const onCall = document.body.dataset.screen === 'call';
       this.tour.start(onCall ? callTour : lobbyTour, { force: true });

@@ -32,5 +32,11 @@ jobs:
       - name: Check PHP files
         run: npm run lint:php
 
-      - name: Unit tests
-        run: npm test
+      - name: Unit tests (JavaScript)
+        run: node --test tests/*.test.mjs
+
+      # Executes the theme integration against WordPress stubs. Linting proves
+      # a file parses; this proves the markup, the menu de-duplication and the
+      # escaping are right.
+      - name: Integration tests (WordPress)
+        run: npm run test:php
