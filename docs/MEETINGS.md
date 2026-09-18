@@ -285,6 +285,38 @@ microphone and display-capture permissions, that personal rooms are stable and
 not derivable from a member ID, and that a hostile display name cannot inject
 markup. Linting proves a file parses; this proves it behaves.
 
+### Verifying against real WordPress
+
+The stub suite proves the code behaves correctly against WordPress **as we
+understand it**. It cannot catch a misremembered function or a hook that does
+not exist — the stub would be wrong in the same way as the code. Two checks
+close that gap.
+
+**API contract.** Extracts every function, hook and constant the theme code
+actually uses and verifies each against real source:
+
+```bash
+curl -sSL -o wp.tar.gz https://wordpress.org/latest.tar.gz && tar xzf wp.tar.gz
+curl -sSL -o wc.zip https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip && unzip -q wc.zip
+WP_SRC=./wordpress WC_SRC=./woocommerce php tests/php/api-contract.test.php
+```
+
+**End to end.** Stands up a real WordPress with WooCommerce on SQLite (no
+MySQL needed), installs the theme files exactly as section 4 describes, and
+drives it in a browser as a signed-in member:
+
+```bash
+scripts/verify-wordpress.sh /tmp/nutramea-wp-verify 8090
+BASE_URL=http://127.0.0.1:8090 node tests/e2e/wordpress.mjs
+```
+
+Neither runs in CI — the contract check needs source trees and the end-to-end
+check needs a running site. Run both before a release, and after WooCommerce
+updates.
+
+Last verified against **WordPress 7.1.1** and **WooCommerce 11.1.1**:
+55 contract checks and 28 end-to-end checks, all passing.
+
 ## 11. Why this architecture
 
 **Why not the call provider's recording API?** Every hosted option is metered
