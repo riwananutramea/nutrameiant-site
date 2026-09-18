@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      # Every application module must load through the real ESM loader, which
+      # catches bad import specifiers as well as syntax errors.
+      - name: Check JavaScript modules
+        run: npm run lint:js
+
+      - name: Check PHP files
+        run: npm run lint:php
+
+      - name: Unit tests
+        run: npm test

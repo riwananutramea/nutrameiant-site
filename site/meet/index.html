@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meetings · NutraMEA Int.</title>
+<meta name="description" content="Private, recorded video meetings for NutraMEA Intelligence members.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/meet.css">
+<!-- Inline so the page never issues a favicon request it cannot satisfy. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0c0b'/%3E%3Cpath d='M7 20V11l9 9V11' stroke='%23b9ff39' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='23' cy='13' r='2.4' fill='%23b9ff39'/%3E%3C/svg%3E">
+</head>
+<body data-screen="loading" data-recording="false">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+        <text x="4" y="40" font-family="Inter, sans-serif" font-weight="700" font-size="30" fill="#f3f5f3">Nutra</text>
+        <text x="96" y="40" font-family="Inter, sans-serif" font-weight="700" font-size="30" fill="#b9ff39">MEA</text>
+        <path d="M6 49 Q 100 59 180 44" stroke="#b9ff39" stroke-width="3" stroke-linecap="round" fill="none"/>
+      </svg>
+    </span>
+    <span class="topbar__title" data-brand>NutraMEA Intelligence</span>
+  </div>
+  <div class="topbar__status">
+    <span id="call-clock" class="clock" aria-label="Meeting duration">00:00</span>
+    <span id="link-quality" class="pill" data-quality="good"></span>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ------------------------------------------------------------- lobby -->
+  <section id="screen-lobby" class="screen screen--lobby" hidden>
+    <div class="lobby">
+      <h1 class="lobby__title">Start a private meeting</h1>
+      <p class="lobby__lead">
+        Encrypted in transit, no time limit, and recorded straight to your own
+        computer. Nothing here costs anything to run.
+      </p>
+
+      <div class="field">
+        <label for="room-name">Meeting room</label>
+        <div class="field__row">
+          <input id="room-name" type="text" autocomplete="off" spellcheck="false"
+                 placeholder="nutramea-abcd-1234">
+          <button id="new-room" type="button" class="button button--ghost">New room</button>
+        </div>
+        <p class="field__hint">Anyone with this room name and the link can join, so treat it as a password.</p>
+      </div>
+
+      <div class="field">
+        <label for="display-name">Your name</label>
+        <input id="display-name" type="text" autocomplete="name" placeholder="How others will see you">
+      </div>
+
+      <fieldset class="field field--options">
+        <legend>Options</legend>
+        <label class="check">
+          <input id="audio-only" type="checkbox">
+          <span>Join audio-only <em>— best on a weak or mobile connection</em></span>
+        </label>
+        <label class="check">
+          <input id="enable-notes" type="checkbox" checked>
+          <span>Live AI notes <em>— transcript, decisions and action items</em></span>
+        </label>
+        <div class="subfield">
+          <label for="notes-engine">Notes capture</label>
+          <select id="notes-engine">
+            <option value="webspeech">My microphone only — starts instantly</option>
+            <option value="whisper">Everyone in the room — needs recording on, one-time 75&nbsp;MB download</option>
+          </select>
+          <p id="notes-engine-hint" class="field__hint"></p>
+        </div>
+      </fieldset>
+
+      <button id="join-button" type="button" class="button button--primary button--lg">
+        Join meeting
+      </button>
+      <p id="lobby-status" class="lobby__status" role="status" aria-live="polite"></p>
+
+      <ul id="capabilities" class="capabilities" aria-label="What this browser supports"></ul>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------------- call -->
+  <section id="screen-call" class="screen screen--call" hidden>
+    <div class="call">
+      <div id="stage" class="stage" aria-label="Video meeting"></div>
+
+      <aside id="side-panel" class="side-panel" aria-label="Live notes">
+        <header class="side-panel__head">
+          <h2>Live notes</h2>
+          <span class="side-panel__hint">Kept on this device</span>
+        </header>
+        <div id="transcript" class="transcript" role="log" aria-live="polite" aria-atomic="false"></div>
+      </aside>
+    </div>
+
+    <div class="controls" role="toolbar" aria-label="Meeting controls">
+      <div class="controls__group controls__group--rec">
+        <button id="record-button" type="button" class="button button--record">Record</button>
+        <span class="rec-meta">
+          <span id="record-state" class="rec-meta__state">Not recording</span>
+          <span id="record-timer" class="rec-meta__timer">00:00</span>
+          <span id="record-size" class="rec-meta__size"></span>
+        </span>
+      </div>
+
+      <div class="controls__group">
+        <span class="participants">
+          <span id="participant-count">1</span> in call
+        </span>
+        <button id="toggle-audio-only" type="button" class="button button--ghost" aria-pressed="false">
+          Audio-only mode
+        </button>
+        <button id="copy-link" type="button" class="button button--ghost">Copy invite</button>
+        <button id="toggle-notes-panel" type="button" class="button button--ghost" aria-expanded="false"
+                aria-controls="side-panel">Notes</button>
+        <button id="leave-button" type="button" class="button button--danger">Leave</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------------- summary -->
+  <section id="screen-summary" class="screen screen--summary" hidden>
+    <div class="summary">
+      <div id="summary-body" class="summary__body"></div>
+      <progress id="upload-progress" class="upload-progress" value="0" max="100" hidden></progress>
+      <div id="summary-actions" class="summary__actions"></div>
+      <button id="back-to-lobby" type="button" class="button button--ghost">Start another meeting</button>
+    </div>
+  </section>
+
+</main>
+
+<div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+
+<noscript>
+  <p class="noscript">NutraMEA meetings need JavaScript enabled.</p>
+</noscript>
+
+<script type="module">
+  import { MeetApp } from './assets/js/ui/app.js';
+  const app = new MeetApp();
+  app.init().catch((error) => {
+    console.error(error);
+    document.body.innerHTML =
+      '<p class="fatal">This meeting page could not start: ' + error.message + '</p>';
+  });
+  // Exposed for support: lets an operator pull diagnostics from the console.
+  window.nutrameaMeet = app;
+</script>
+
+</body>
+</html>

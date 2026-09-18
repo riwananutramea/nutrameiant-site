@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NutraMEA Weekly Brief</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0c0b'/%3E%3Ctext x='16' y='22' font-family='sans-serif' font-size='16' font-weight='700' fill='%23b9ff39' text-anchor='middle'%3EN%3C/text%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #0a0c0b;
@@ -50,7 +51,20 @@
     <button class="lang-btn" data-lang="zh" aria-pressed="false">中文</button>
   </div>
 </header>
-<!-- Insert the rest of the NutraMEA page content below this header -->
-<script src="../assets/nutramea.js" defer></script>
+<main class="home">
+  <h1>NutraMEA Intelligence</h1>
+  <p>B2B intelligence for the nutraceuticals sector across the Middle East.</p>
+  <p><a class="home__cta" href="./meet/">Member meetings &rarr;</a></p>
+</main>
+<style>
+  .home { padding: 40px 20px; max-width: 640px; }
+  .home h1 { font-size: 26px; margin-bottom: 10px; }
+  .home p { color: var(--soft); margin-bottom: 14px; }
+  .home__cta {
+    display: inline-block; margin-top: 8px; padding: 12px 20px;
+    background: var(--accent); color: var(--bg); border-radius: 8px;
+    font-weight: 600; text-decoration: none;
+  }
+</style>
 </body>
 </html>
