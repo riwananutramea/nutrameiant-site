@@ -149,6 +149,27 @@ function flush_rewrite_rules( $hard = true ) {
 }
 function add_rewrite_endpoint( $name, $places ) { $GLOBALS['wp_rewrite_endpoints'][] = $name; }
 
+$GLOBALS['wp_rewrite_rules']  = array();
+$GLOBALS['wp_redirects']      = array();
+$GLOBALS['wp_header_calls']   = 0;
+$GLOBALS['wp_footer_calls']   = 0;
+$GLOBALS['wp_status_header']  = 0;
+$GLOBALS['wp_nocache_called'] = false;
+
+function add_rewrite_rule( $regex, $query, $after = 'bottom' ) {
+	$GLOBALS['wp_rewrite_rules'][ $regex ] = $query;
+}
+function nocache_headers() { $GLOBALS['wp_nocache_called'] = true; }
+function status_header( $code ) { $GLOBALS['wp_status_header'] = $code; }
+function get_header( $name = null ) { $GLOBALS['wp_header_calls']++; }
+function get_footer( $name = null ) { $GLOBALS['wp_footer_calls']++; }
+function wp_safe_redirect( $location, $status = 302 ) {
+	$GLOBALS['wp_redirects'][] = $location;
+	// The real function does not exit; callers do. Signal via exception so the
+	// test harness can observe the redirect without killing the process.
+	throw new RuntimeException( 'REDIRECT:' . $location );
+}
+
 function set_query_var_stub( $k, $v ) { $GLOBALS['wp_query_vars'][ $k ] = $v; }
 function get_query_var( $k, $default = '' ) { return $GLOBALS['wp_query_vars'][ $k ] ?? $default; }
 

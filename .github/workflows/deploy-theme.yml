@@ -1,0 +1,128 @@
+name: Deploy meetings to nutrameaint.com
+
+# Ships ONLY this feature's files into the live theme. It never touches the
+# rest of the theme, never deletes anything, and never runs unless the tests
+# pass first.
+#
+# Credentials live in GitHub repository secrets (Settings -> Secrets and
+# variables -> Actions), encrypted at rest and never visible in logs or in a
+# conversation:
+#
+#   FTP_SERVER    e.g. ftp.nutrameaint.com   (or the Hostinger FTP host)
+#   FTP_USERNAME  the FTP/SFTP user
+#   FTP_PASSWORD  that user's password
+#   FTP_PROTOCOL  optional: "ftps" (default) or "sftp"
+#   THEME_PATH    optional: defaults to the standard Hostinger path below
+#
+# Until those exist the job stops with an explanation rather than failing.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List what would be uploaded, upload nothing'
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-theme
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      # Nothing reaches the live site unless everything passes here.
+      - name: Verify before deploying
+        run: npm run check
+
+      - name: Check for credentials
+        id: creds
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        run: |
+          if [ -z "$FTP_SERVER" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No FTP_SERVER secret set — nothing was deployed."
+            echo "Add FTP_SERVER, FTP_USERNAME and FTP_PASSWORD under"
+            echo "Settings -> Secrets and variables -> Actions, then run this again."
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Assemble exactly what ships, so the upload step cannot pick up
+      # anything else in the repository by accident.
+      - name: Stage the theme files
+        if: steps.creds.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          rm -rf .deploy && mkdir -p .deploy/woocommerce/myaccount
+          cp -r site/meet .deploy/nutramea-meet
+          # Development fixtures are not part of the theme.
+          rm -f .deploy/nutramea-meet/embed-harness.html
+          rm -f .deploy/nutramea-meet/dashboard-preview.html
+          cp theme/nutramea-meetings.php .deploy/
+          cp theme/woocommerce/myaccount/dashboard.php .deploy/woocommerce/myaccount/
+          echo "Staged:"
+          find .deploy -type f | sort | sed 's/^/  /'
+          echo "Total: $(find .deploy -type f | wc -l) files"
+
+      - name: Dry run summary
+        if: steps.creds.outputs.ready == 'true' && inputs.dry_run
+        run: |
+          echo "::notice::Dry run — nothing was uploaded."
+          echo "Re-run with 'dry_run' unchecked to deploy."
+
+      - name: Upload to the theme
+        if: steps.creds.outputs.ready == 'true' && !inputs.dry_run
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
+          local-dir: ./.deploy/
+          server-dir: ${{ secrets.THEME_PATH || '/public_html/wp-content/themes/nutramea-theme/' }}
+          # Additive only. Without this the action would mirror the directory
+          # and delete the rest of the theme.
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+
+      - name: Check the live page responds
+        if: steps.creds.outputs.ready == 'true' && !inputs.dry_run
+        run: |
+          set -euo pipefail
+          echo "Waiting for the upload to settle…"
+          sleep 10
+          # Signed out, /meetings/ should redirect to the login page. A 200 with
+          # the app on it would mean the sign-in gate is not working; a 404
+          # means permalinks still need re-saving.
+          code=$(curl -sS -o /dev/null -m 30 -w '%{http_code}' https://nutrameaint.com/meetings/ || echo 000)
+          echo "GET /meetings/ -> $code"
+          case "$code" in
+            30*) echo "::notice::Live and gated correctly (redirects to sign-in)." ;;
+            200) echo "::warning::200 while signed out — check the sign-in gate." ;;
+            404) echo "::warning::404 — sign in to wp-admin once, or re-save Settings -> Permalinks." ;;
+            *)   echo "::warning::Unexpected status $code — check the site." ;;
+          esac
+
+      - name: Confirm the theme still loads
+        if: steps.creds.outputs.ready == 'true' && !inputs.dry_run
+        run: |
+          code=$(curl -sS -o /dev/null -m 30 -w '%{http_code}' https://nutrameaint.com/ || echo 000)
+          echo "GET / -> $code"
+          test "$code" = "200" || { echo "::error::Home page returned $code after deploy."; exit 1; }

@@ -122,9 +122,40 @@ boilerplate, leaving the page greeting the member twice. Overriding the
 template replaces it, which is the documented WordPress way and stays theme
 code.
 
-**Meetings** now appears in the My Account menu at `/my-account/meetings/`.
+### Where it appears
 
-Without WooCommerce, put `[nutramea_meetings]` on any page instead.
+**Without WooCommerce** — the common case, and what nutrameaint.com runs:
+
+- `/meetings/` is a standalone page, created by the theme. No page to add in
+  WordPress, no shortcode needed. Invite links are `/meetings/<room>`.
+- `[nutramea_meetings]` also works on any page, including an Elementor
+  shortcode widget, if you would rather it live inside an existing member page.
+
+**With WooCommerce**, additionally:
+
+- **Meetings** appears in the My Account menu at `/my-account/meetings/`.
+
+The standalone route is the primary path. An integration that only hooked
+WooCommerce would install cleanly, raise no errors, and do nothing at all on a
+site without it — the worst kind of failure, because nothing signals it.
+
+### Pointing it at your own login page
+
+Platforms usually have a branded login rather than `wp-login.php`:
+
+```php
+add_filter( 'nutramea_meetings_login_url', function () {
+    return home_url( '/login/' );
+} );
+```
+
+And to move the page itself:
+
+```php
+add_filter( 'nutramea_meetings_route', function () {
+    return 'member-calls';   // -> /member-calls/
+} );
+```
 
 The app is embedded in a same-origin iframe. That is deliberate: it keeps theme
 CSS from interfering with the meeting interface, and vice versa.

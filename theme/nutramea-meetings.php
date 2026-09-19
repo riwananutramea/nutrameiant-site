@@ -49,6 +49,9 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		const ENDPOINT      = 'meetings';
 		const APP_DIRECTORY = 'nutramea-meet';
 		const REWRITE_FLAG  = 'nutramea_meetings_rewrites';
+		// Standalone page, for platforms without WooCommerce account endpoints.
+		const ROUTE         = 'meetings';
+		const QUERY_FLAG    = 'nutramea_meeting_page';
 
 		/**
 		 * Singleton instance.
@@ -119,9 +122,15 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 			}
 
 			add_action( 'init', array( $this, 'register_endpoint' ) );
+			add_action( 'init', array( $this, 'register_standalone_route' ) );
 			add_filter( 'query_vars', array( $this, 'register_query_vars' ) );
 
-			// WooCommerce My Account integration — the member's existing home.
+			// Standalone /meetings/ page. This is the path that works on a
+			// platform with a custom member area — which is most of them.
+			// WooCommerce is treated as the optional extra, not the assumption.
+			add_action( 'template_redirect', array( $this, 'maybe_render_standalone' ) );
+
+			// WooCommerce My Account integration, if this site has one.
 			add_filter( 'woocommerce_account_menu_items', array( $this, 'add_account_menu_item' ) );
 			add_action( 'woocommerce_account_' . self::ENDPOINT . '_endpoint', array( $this, 'render_account_page' ) );
 
@@ -241,9 +250,13 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 				}
 			}
 
+			// WooCommerce's endpoint when this site has one, otherwise the
+			// standalone page. The old fallback hardcoded /my-account/, which
+			// does not exist on a platform without WooCommerce — the button
+			// would have pointed at a 404.
 			$meetings_url = function_exists( 'wc_get_account_endpoint_url' )
 				? wc_get_account_endpoint_url( self::ENDPOINT )
-				: home_url( '/my-account/' . self::ENDPOINT . '/' );
+				: $this->route_url();
 
 			$html = sprintf(
 				'<div class="nutramea-dash">
@@ -285,6 +298,113 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		}
 
 		/**
+		 * Registers the standalone /meetings/ page.
+		 *
+		 * Most WordPress platforms do not have WooCommerce account endpoints —
+		 * the member area is custom. Hooking only WooCommerce would mean this
+		 * feature silently does nothing on those sites, which is the worst
+		 * kind of failure: installed, no errors, no feature.
+		 *
+		 * So the real entry point is a plain route the theme owns. The
+		 * WooCommerce integration stays as a bonus where it applies.
+		 */
+		public function register_standalone_route() {
+			$route = $this->route_slug();
+			add_rewrite_rule(
+				'^' . preg_quote( $route, '/' ) . '/?$',
+				'index.php?' . self::QUERY_FLAG . '=1',
+				'top'
+			);
+			// /meetings/<room> opens an invite directly.
+			add_rewrite_rule(
+				'^' . preg_quote( $route, '/' ) . '/([^/]+)/?$',
+				'index.php?' . self::QUERY_FLAG . '=1&meeting=$matches[1]',
+				'top'
+			);
+		}
+
+		/**
+		 * The slug the standalone page lives at.
+		 *
+		 * Filterable so a site already using /meetings/ for something else can
+		 * move it without editing this file.
+		 *
+		 * @return string
+		 */
+		public function route_slug() {
+			$slug = apply_filters( 'nutramea_meetings_route', self::ROUTE );
+			$slug = sanitize_title( (string) $slug );
+			return '' === $slug ? self::ROUTE : $slug;
+		}
+
+		/** Public URL of the meetings page. */
+		public function route_url() {
+			return home_url( '/' . $this->route_slug() . '/' );
+		}
+
+		/**
+		 * Renders the standalone page.
+		 *
+		 * Uses the theme's own header and footer, so the meeting sits inside
+		 * the site rather than on a bare page.
+		 */
+		public function maybe_render_standalone() {
+			if ( ! get_query_var( self::QUERY_FLAG ) ) {
+				return;
+			}
+
+			// Per-member and never worth caching: the page carries the
+			// member's own room, so a cached copy would hand one member's
+			// room to another. LiteSpeed and friends honour these.
+			if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+				define( 'DONOTCACHEPAGE', true );
+			}
+			nocache_headers();
+
+			if ( ! is_user_logged_in() ) {
+				wp_safe_redirect( $this->login_url( $this->route_url() ) );
+				exit;
+			}
+
+			$this->output_standalone_page();
+			exit;
+		}
+
+		/**
+		 * Writes the standalone page.
+		 *
+		 * Kept separate from maybe_render_standalone() so the markup can be
+		 * exercised without the `exit` that necessarily follows it in a real
+		 * request — an `exit` inside the code under test ends the test run.
+		 */
+		public function output_standalone_page() {
+			status_header( 200 );
+			get_header();
+			echo '<div class="nutramea-meet-page">';
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped within.
+			echo $this->render();
+			echo '</div>';
+			get_footer();
+		}
+
+		/**
+		 * Where to send a signed-out visitor.
+		 *
+		 * Platforms commonly have their own branded login page rather than
+		 * wp-login.php, so this is filterable.
+		 *
+		 * @param string $redirect Where to return after signing in.
+		 * @return string
+		 */
+		public function login_url( $redirect = '' ) {
+			$url = apply_filters( 'nutramea_meetings_login_url', '', $redirect );
+			if ( is_string( $url ) && '' !== $url ) {
+				return $url;
+			}
+			return wp_login_url( $redirect );
+		}
+
+		/**
 		 * Allows ?meeting=<slug> so an invite link can open a specific room.
 		 *
 		 * @param array $vars Registered query vars.
@@ -292,6 +412,7 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 		 */
 		public function register_query_vars( $vars ) {
 			$vars[] = 'meeting';
+			$vars[] = self::QUERY_FLAG;
 			return $vars;
 		}
 
@@ -541,7 +662,7 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 				return sprintf(
 					'<div class="nutramea-meet__gate"><p>%s</p><p><a class="button" href="%s">%s</a></p></div>',
 					esc_html__( 'Meetings are available to NutraMEA members. Please sign in to continue.', 'nutramea' ),
-					esc_url( wp_login_url( $this->current_url() ) ),
+					esc_url( $this->login_url( $this->current_url() ) ),
 					esc_html__( 'Sign in', 'nutramea' )
 				);
 			}
