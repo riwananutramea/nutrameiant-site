@@ -191,9 +191,51 @@ PHPLINE
             *)   echo "::warning::Unexpected status $code — check the site." ;;
           esac
 
-      - name: Confirm the theme still loads
+      # Health check, and a rescue if it fails.
+      #
+      # The home page is NOT a valid health check on this site: LiteSpeed keeps
+      # serving a cached copy long after PHP has started throwing fatal errors,
+      # so a dead site reports 200. This is not hypothetical — it masked a real
+      # outage where every dynamic page was down while the home page looked
+      # fine. wp-login.php is never cached, so it tells the truth.
+      - name: Confirm the site is genuinely healthy
         if: steps.creds.outputs.ready == 'true' && env.DRY_RUN != 'true'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          THEME_DIR: ${{ secrets.THEME_PATH || '/public_html/wp-content/themes/nutramea-theme/' }}
         run: |
-          code=$(curl -sS -o /dev/null -m 30 -w '%{http_code}' https://nutrameaint.com/ || echo 000)
-          echo "GET / -> $code"
-          test "$code" = "200" || { echo "::error::Home page returned $code after deploy."; exit 1; }
+          set -euo pipefail
+          OPTS="set ftp:ssl-force true; set ssl:verify-certificate no; set net:max-retries 3; set net:timeout 20"
+
+          health() {
+            curl -sS -o /dev/null -m 30 -w '%{http_code}' https://nutrameaint.com/wp-login.php || echo 000
+          }
+
+          code=$(health)
+          echo "GET /wp-login.php -> $code"
+          if [ "$code" = "200" ]; then
+            echo "::notice::Site healthy — sign-in is serving normally."
+            exit 0
+          fi
+
+          # Something we shipped is fatal. Take the feature back out rather than
+          # leave the site down: a missing feature is recoverable, an unusable
+          # site is not.
+          echo "::error::Sign-in returned $code. Removing the feature to restore the site."
+          lftp -c "$OPTS; open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER'; get '${THEME_DIR}functions.php' -o functions.php"
+          grep -v "nutramea-meetings.php" functions.php > functions.rescued.php
+          grep -v "NutraMEA member meetings" functions.rescued.php > functions.clean.php
+          php -l functions.clean.php
+          lftp -c "$OPTS; open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER'; put functions.clean.php -o '${THEME_DIR}functions.php'"
+
+          sleep 8
+          after=$(health)
+          echo "After rescue, GET /wp-login.php -> $after"
+          if [ "$after" = "200" ]; then
+            echo "::error::Site restored, feature removed. Investigate before redeploying."
+          else
+            echo "::error::Still unhealthy after rescue — the cause is NOT this feature. Check the host."
+          fi
+          exit 1
