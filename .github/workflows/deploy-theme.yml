@@ -17,6 +17,14 @@ name: Deploy meetings to nutrameaint.com
 # Until those exist the job stops with an explanation rather than failing.
 
 on:
+  # Automatic: any change to the feature on main ships itself.
+  push:
+    branches: [ main ]
+    paths:
+      - 'site/meet/**'
+      - 'theme/**'
+      - '.github/workflows/deploy-theme.yml'
+  # Manual: defaults to a dry run, so a deliberate deploy is a deliberate act.
   workflow_dispatch:
     inputs:
       dry_run:
@@ -31,6 +39,11 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      # A push to main is an intentional release and uploads. A manual run
+      # honours the checkbox, which is ticked by default — so someone clicking
+      # "Run workflow" to see what happens does not ship anything.
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
     steps:
       - uses: actions/checkout@v4
 
@@ -79,13 +92,13 @@ jobs:
           echo "Total: $(find .deploy -type f | wc -l) files"
 
       - name: Dry run summary
-        if: steps.creds.outputs.ready == 'true' && inputs.dry_run
+        if: steps.creds.outputs.ready == 'true' && env.DRY_RUN == 'true'
         run: |
           echo "::notice::Dry run — nothing was uploaded."
-          echo "Re-run with 'dry_run' unchecked to deploy."
+          echo "Untick 'dry_run' to deploy, or push to main."
 
       - name: Upload to the theme
-        if: steps.creds.outputs.ready == 'true' && !inputs.dry_run
+        if: steps.creds.outputs.ready == 'true' && env.DRY_RUN != 'true'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -103,7 +116,7 @@ jobs:
             **/node_modules/**
 
       - name: Check the live page responds
-        if: steps.creds.outputs.ready == 'true' && !inputs.dry_run
+        if: steps.creds.outputs.ready == 'true' && env.DRY_RUN != 'true'
         run: |
           set -euo pipefail
           echo "Waiting for the upload to settle…"
@@ -121,7 +134,7 @@ jobs:
           esac
 
       - name: Confirm the theme still loads
-        if: steps.creds.outputs.ready == 'true' && !inputs.dry_run
+        if: steps.creds.outputs.ready == 'true' && env.DRY_RUN != 'true'
         run: |
           code=$(curl -sS -o /dev/null -m 30 -w '%{http_code}' https://nutrameaint.com/ || echo 000)
           echo "GET / -> $code"
