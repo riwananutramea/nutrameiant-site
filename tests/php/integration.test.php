@@ -193,8 +193,23 @@ t( 'the embedded app is told to hide its duplicate branding', function () {
 	$cfg = decode_cfg( NutraMEA_Meetings::instance()->app_url( 7 ) );
 	eq( $cfg['embedded'], true, 'embedded flag not passed' );
 	eq( $cfg['provider'], 'jitsi' );
+	// The URL carries presentation settings only. Anything security-sensitive
+	// travels through the inline global instead, because the app's page is a
+	// static file anyone can link to with a `cfg` of their choosing.
+	ok( ! isset( $cfg['storage'] ), 'storage settings must not travel in the URL' );
+} );
+
+t( 'sensitive settings travel through the trusted inline global', function () {
+	$GLOBALS['wc_is_account_page'] = true;
+	do_action( 'wp_enqueue_scripts' );
+	$js = $GLOBALS['wp_inline_scripts']['nutramea-meetings-config'] ?? '';
+	contains( $js, 'window.NUTRAMEA_MEET_CONFIG', 'the trusted global was not emitted' );
+	contains( $js, 'googleClientId', 'storage settings missing from the trusted channel' );
+	$decoded = json_decode( trim( str_replace( array( 'window.NUTRAMEA_MEET_CONFIG =', ';' ), '', $js ) ), true );
+	ok( is_array( $decoded ), 'the global is not valid JSON' );
 	// Nothing that could bill must ever be switched on by default.
-	eq( $cfg['storage']['googleClientId'], '' );
+	eq( $decoded['storage']['googleClientId'], '' );
+	$GLOBALS['wc_is_account_page'] = false;
 } );
 
 t( 'the config filter can repoint the deployment without editing the file', function () {
@@ -205,7 +220,16 @@ t( 'the config filter can repoint the deployment without editing the file', func
 	} );
 	$cfg = decode_cfg( NutraMEA_Meetings::instance()->app_url( 7 ) );
 	eq( $cfg['jitsi']['domain'], 'meet.nutrameaint.com' );
-	eq( $cfg['storage']['googleClientId'], 'abc.apps.googleusercontent.com' );
+
+	// The Google client reaches the app through the trusted global, not the URL.
+	$GLOBALS['wc_is_account_page'] = true;
+	do_action( 'wp_enqueue_scripts' );
+	contains(
+		$GLOBALS['wp_inline_scripts']['nutramea-meetings-config'] ?? '',
+		'abc.apps.googleusercontent.com',
+		'filtered client ID did not reach the trusted channel'
+	);
+	$GLOBALS['wc_is_account_page'] = false;
 } );
 
 /* -------------------------------------------------------------- room names */

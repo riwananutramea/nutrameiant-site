@@ -521,8 +521,13 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 			$user = get_userdata( $user_id );
 			$name = $user ? $user->display_name : __( 'Member', 'nutramea' );
 
+			// Presentation settings only. Anything sensitive goes through the
+			// inline global in enqueue_assets(), which the URL cannot reach.
+			$config = $this->get_client_config();
+			unset( $config['storage'] );
+
 			$packed = rtrim(
-				strtr( base64_encode( wp_json_encode( $this->get_client_config() ) ), '+/', '-_' ),
+				strtr( base64_encode( wp_json_encode( $config ) ), '+/', '-_' ),
 				'='
 			);
 
@@ -548,6 +553,25 @@ if ( ! class_exists( 'NutraMEA_Meetings' ) ) {
 			wp_register_style( 'nutramea-meetings', false, array(), self::VERSION );
 			wp_enqueue_style( 'nutramea-meetings' );
 			wp_add_inline_style( 'nutramea-meetings', $this->wrapper_css() );
+
+			// The trusted configuration channel.
+			//
+			// The app also receives settings through a `cfg` query parameter,
+			// but its page is a static file anyone can link to with any `cfg`
+			// they like — so the app treats that as hostile and accepts only a
+			// narrow allowlist of presentation settings from it.
+			//
+			// Anything security-sensitive (the Google OAuth client, the Drive
+			// scope) travels here instead: an inline global on THIS page. The
+			// app frame is same-origin, so it reads the value through
+			// window.parent, and an attacker has no way to write to it.
+			wp_register_script( 'nutramea-meetings-config', false, array(), self::VERSION, false );
+			wp_enqueue_script( 'nutramea-meetings-config' );
+			wp_add_inline_script(
+				'nutramea-meetings-config',
+				'window.NUTRAMEA_MEET_CONFIG = ' . wp_json_encode( $this->get_client_config() ) . ';',
+				'before'
+			);
 		}
 
 		/**

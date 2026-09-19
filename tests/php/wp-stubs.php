@@ -183,6 +183,14 @@ function wp_register_style( $h, $src, $deps = array(), $ver = null ) { return tr
 function wp_enqueue_style( $h ) { return true; }
 function wp_add_inline_style( $h, $css ) { $GLOBALS['wp_inline_styles'][ $h ] = $css; return true; }
 
+$GLOBALS['wp_inline_scripts'] = array();
+function wp_register_script( $h, $src, $deps = array(), $ver = null, $footer = false ) { return true; }
+function wp_enqueue_script( $h ) { return true; }
+function wp_add_inline_script( $h, $js, $pos = 'after' ) {
+	$GLOBALS['wp_inline_scripts'][ $h ] = $js;
+	return true;
+}
+
 /* ------------------------------------------------------------ woocommerce */
 
 $GLOBALS['wc_account_menu'] = array(

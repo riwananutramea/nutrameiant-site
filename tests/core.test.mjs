@@ -179,11 +179,13 @@ test('decodePackedConfig round-trips and fails safe', () => {
 });
 
 test('buildConfig layers defaults, packed config then query string', () => {
-  const packed = Buffer.from(JSON.stringify({ quality: 360, jitsi: { domain: 'a.example' } })).toString('base64url');
+  // 8x8.vc is on the trusted transport list; an arbitrary host is rejected,
+  // which tests/security.test.mjs covers in full.
+  const packed = Buffer.from(JSON.stringify({ quality: 360, jitsi: { domain: '8x8.vc' } })).toString('base64url');
   const config = buildConfig({ search: `?cfg=${packed}&quality=1080&room=board&name=Riwana&audioOnly=1` });
   // The query string wins over packed config, which wins over defaults.
   assert.equal(config.quality, 1080);
-  assert.equal(config.jitsi.domain, 'a.example');
+  assert.equal(config.jitsi.domain, '8x8.vc');
   assert.equal(config.jitsi.roomPrefix, 'NutraMEAInt');
   assert.deepEqual(config.session, { room: 'board', displayName: 'Riwana', audioOnly: true });
 });

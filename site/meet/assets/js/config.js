@@ -183,12 +183,108 @@ export function readQueryOverrides(search, spec = QUERY_OVERRIDES) {
 }
 
 /**
+ * Transports the app is allowed to load its SDK from.
+ *
+ * This list exists because the SDK is fetched as a <script> from the
+ * configured domain. Anything that can set that domain can execute code on
+ * this site's origin, so it cannot come from an untrusted source.
+ */
+export const TRUSTED_DOMAINS = Object.freeze([
+  'meet.jit.si',
+  '8x8.vc',
+]);
+
+const SHORT_TEXT = (v) => typeof v === 'string' && v.length > 0 && v.length <= 120;
+const BOOLEAN = (v) => typeof v === 'boolean';
+const SLUG = (v) => typeof v === 'string' && /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(v);
+
+/**
+ * The ONLY keys the `cfg` query parameter may set, each with a validator.
+ *
+ * `cfg` is attacker-controllable: the app's index.html is a static file, so
+ * anyone can send a member a link to it carrying any `cfg` they like. An
+ * allowlist is therefore the contract — unknown keys are dropped, and a value
+ * that fails its validator is dropped rather than coerced, so a malformed
+ * entry can never fall through to a weaker default.
+ */
+const PACKED_SCHEMA = Object.freeze({
+  provider: (v) => v === 'jitsi' || v === 'daily',
+  brandName: SHORT_TEXT,
+  brandShort: SHORT_TEXT,
+  embedded: BOOLEAN,
+  quality: (v) => [180, 360, 720, 1080].includes(Number(v)),
+  channelLastN: (v) => Number.isInteger(v) && v >= 1 && v <= 50,
+  'jitsi.domain': (v) => isTrustedDomain(v),
+  'jitsi.roomPrefix': SLUG,
+  'jitsi.tenant': (v) => v === '' || SLUG(v),
+  'notes.enabled': BOOLEAN,
+  'notes.engine': (v) => v === 'webspeech' || v === 'whisper',
+  'notes.lang': (v) => typeof v === 'string' && /^[a-zA-Z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(v),
+});
+
+/*
+ * Deliberately absent from the schema above: everything under `storage`.
+ *
+ * Validating the SHAPE of a Google client ID is not enough — an attacker can
+ * register a real OAuth application and get a genuinely well-formed ID. A
+ * crafted link could then raise a real Google consent screen, launched from
+ * this site, for an application they control. Drive settings therefore come
+ * only from the trusted channel below, never from the URL.
+ */
+
+/** A hostname the SDK may be loaded from. */
+export function isTrustedDomain(value, extra = []) {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 253) return false;
+  // Hostname only: no scheme, port, path, credentials or whitespace. Without
+  // this, "meet.jit.si.evil.com" or "evil.com/#meet.jit.si" could slip past.
+  if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(value)) return false;
+  const host = value.toLowerCase();
+  return TRUSTED_DOMAINS.includes(host) || extra.map((d) => String(d).toLowerCase()).includes(host);
+}
+
+function readPath(object, path) {
+  return path.split('.').reduce((node, key) => (node == null ? undefined : node[key]), object);
+}
+
+function writePath(object, path, value) {
+  const keys = path.split('.');
+  const last = keys.pop();
+  let node = object;
+  for (const key of keys) {
+    if (!isPlainObject(node[key])) node[key] = {};
+    node = node[key];
+  }
+  node[last] = value;
+}
+
+/**
+ * Reduces a decoded `cfg` to the keys it is allowed to set, dropping anything
+ * that fails validation.
+ *
+ * `trustedDomains` lets a server-injected deployment (a self-hosted
+ * meet.nutrameaint.com, say) stay usable without widening the static list:
+ * that value came from the server, not the query string.
+ */
+export function sanitisePackedConfig(packed, { trustedDomains = [] } = {}) {
+  const out = {};
+  if (!isPlainObject(packed)) return out;
+  for (const [path, isValid] of Object.entries(PACKED_SCHEMA)) {
+    const value = readPath(packed, path);
+    if (value === undefined) continue;
+    const ok = path === 'jitsi.domain' ? isTrustedDomain(value, trustedDomains) : isValid(value);
+    if (ok) writePath(out, path, value);
+  }
+  return out;
+}
+
+/**
  * Decodes the `cfg` query parameter: base64url-encoded JSON.
  *
- * This is how WordPress hands server-side settings (Jitsi domain, Google
- * client ID, branding) to the app when it is embedded in an iframe, where a
- * `window.NUTRAMEA_MEET_CONFIG` global from the parent page is not visible.
- * It carries presentation settings only — never a secret.
+ * This is how WordPress hands presentation settings to the app when it is
+ * embedded in an iframe, where a `window.NUTRAMEA_MEET_CONFIG` global from the
+ * parent page is not visible.
+ *
+ * Treat everything it returns as hostile — see sanitisePackedConfig().
  */
 export function decodePackedConfig(value) {
   if (!value) return null;
@@ -206,10 +302,47 @@ export function decodePackedConfig(value) {
   }
 }
 
+/**
+ * The trusted configuration channel.
+ *
+ * The server renders `window.NUTRAMEA_MEET_CONFIG` inline on the page that
+ * frames this app. Because that page and this one are same-origin, the global
+ * is readable through `window.parent` — which makes it a channel an attacker
+ * cannot write to, unlike the URL.
+ *
+ * Standalone (not framed), `window.parent === window`, so this simply reads
+ * the app's own global. Cross-origin access throws by design, and a thrown
+ * SecurityError here means the framing page is not ours — so we trust nothing
+ * from it.
+ */
+export function readTrustedConfig(view = typeof window !== 'undefined' ? window : undefined) {
+  if (!view) return null;
+  if (isPlainObject(view.NUTRAMEA_MEET_CONFIG)) return view.NUTRAMEA_MEET_CONFIG;
+  try {
+    const parent = view.parent;
+    if (parent && parent !== view && isPlainObject(parent.NUTRAMEA_MEET_CONFIG)) {
+      return parent.NUTRAMEA_MEET_CONFIG;
+    }
+  } catch {
+    // Cross-origin framing: not our page, so nothing here is trustworthy.
+    return null;
+  }
+  return null;
+}
+
 export function buildConfig({ injected = null, search = '' } = {}) {
-  const packed = decodePackedConfig(new URLSearchParams(search || '').get('cfg'));
+  // `injected` comes from the server through a channel the URL cannot reach,
+  // and is trusted. `cfg` arrives in the URL and is not, so it is filtered
+  // through an allowlist first.
   let config = mergeConfig(DEFAULTS, injected || {});
-  if (packed) config = mergeConfig(config, packed);
+
+  const serverDomain = readPath(injected || {}, 'jitsi.domain');
+  const packed = sanitisePackedConfig(
+    decodePackedConfig(new URLSearchParams(search || '').get('cfg')),
+    { trustedDomains: serverDomain ? [serverDomain] : [] },
+  );
+  config = mergeConfig(config, packed);
+
   const query = readQueryOverrides(search);
   // `room`, `name` and `audioOnly` are session state, not configuration.
   const { room, name, audioOnly, ...rest } = query;
@@ -223,7 +356,7 @@ export function buildConfig({ injected = null, search = '' } = {}) {
 }
 
 export const config = buildConfig({
-  injected: typeof window !== 'undefined' ? window.NUTRAMEA_MEET_CONFIG : null,
+  injected: readTrustedConfig(),
   search: typeof window !== 'undefined' ? window.location.search : '',
 });
 

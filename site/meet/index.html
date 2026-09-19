@@ -7,6 +7,36 @@
 <meta name="description" content="Private, recorded video meetings for NutraMEA Intelligence members.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#0a0c0b">
+<!--
+  Content Security Policy.
+
+  This page is a static file inside the theme, so anyone can link to it with
+  any query string they like. The app already refuses to take a transport
+  domain from the URL; this is the second lock on the same door — even if some
+  future change let an attacker-chosen URL through, the browser would refuse to
+  execute a script from an origin not named here.
+
+  Each origin below is load-bearing:
+    meet.jit.si / 8x8.vc  the meeting SDK and its conference frame
+    accounts.google.com   Google sign-in, only when Drive delivery is enabled
+    cdn.jsdelivr.net      transformers.js, only for whole-room offline notes
+    huggingface.co        the Whisper model weights, fetched once
+  blob: covers recorded media playback and the worker transformers.js spawns.
+-->
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'wasm-unsafe-eval' https://meet.jit.si https://8x8.vc https://accounts.google.com https://cdn.jsdelivr.net;
+  worker-src 'self' blob:;
+  frame-src https://meet.jit.si https://8x8.vc https://accounts.google.com;
+  connect-src 'self' blob: https://meet.jit.si https://8x8.vc https://www.googleapis.com https://accounts.google.com https://cdn.jsdelivr.net https://huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.hf.co;
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' data: blob:;
+  media-src 'self' blob:;
+  object-src 'none';
+  base-uri 'self';
+  form-action 'none';
+">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -158,21 +188,7 @@
   <p class="noscript">NutraMEA meetings need JavaScript enabled.</p>
 </noscript>
 
-<script type="module">
-  import { MeetApp } from './assets/js/ui/app.js';
-  const app = new MeetApp();
-  app.init().catch((error) => {
-    console.error(error);
-    document.body.replaceChildren(
-      Object.assign(document.createElement('p'), {
-        className: 'fatal',
-        textContent: 'This meeting page could not start: ' + error.message,
-      }),
-    );
-  });
-  // Exposed for support: lets an operator pull diagnostics from the console.
-  window.nutrameaMeet = app;
-</script>
+<script type="module" src="assets/js/boot.js"></script>
 
 </body>
 </html>
