@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>Dashboard preview (development fixture)</title>
+<meta name="robots" content="noindex,nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+ body{margin:0;background:#0a0c0b;color:#f3f5f3;font-family:Inter,system-ui,sans-serif}
+ .site-header{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid rgba(255,255,255,.1)}
+ .site-header b{font-size:18px}.site-header b i{color:#b9ff39;font-style:normal}
+ .wrap{display:flex;gap:28px;padding:28px 24px;max-width:1200px;margin:0 auto}
+ nav.acct{flex:0 0 190px;display:flex;flex-direction:column;gap:6px}
+ nav.acct a{padding:9px 12px;border-radius:8px;color:#d8ddd9;text-decoration:none;font-size:14px}
+ nav.acct a.on{background:rgba(185,255,57,.1);color:#b9ff39;font-weight:600}
+ main{flex:1;min-width:0}
+.nutramea-dash{--nm-accent:#b9ff39;--nm-line:rgba(255,255,255,.1);
+				--nm-muted:#9aa39c;--nm-surface:rgba(255,255,255,.02)}
+			.nutramea-dash__eyebrow{display:flex;align-items:center;gap:.5rem;
+				font-size:.6875rem;font-weight:650;letter-spacing:.09em;
+				text-transform:uppercase;color:var(--nm-muted);margin:0 0 .75rem}
+			.nutramea-dash__eyebrow:before{content:"";width:14px;height:2px;
+				border-radius:1px;background:var(--nm-accent)}
+			.nutramea-dash__greeting{font-size:1.5rem;font-weight:650;
+				letter-spacing:-.02em;margin:0 0 1.75rem}
+			.nutramea-dash__feature{border:1px solid var(--nm-line);border-radius:14px;
+				padding:1.5rem;background:var(--nm-surface);margin-bottom:1.5rem}
+			.nutramea-dash__feature h3{font-size:1.0625rem;font-weight:650;margin:0 0 .5rem}
+			.nutramea-dash__feature p{margin:0 0 1.25rem;color:var(--nm-muted);
+				font-size:.9375rem;line-height:1.6;max-width:56ch}
+			.nutramea-dash__cta{display:inline-block;padding:.75rem 1.25rem;
+				background:var(--nm-accent);color:#0a0c0b;border-radius:10px;
+				font-weight:650;font-size:.9375rem;text-decoration:none}
+			.nutramea-dash__cta:hover{background:#cbff6b;color:#0a0c0b}
+			.nutramea-dash__links{display:flex;flex-wrap:wrap;gap:.5rem;
+				padding-top:1.25rem;border-top:1px solid var(--nm-line)}
+			.nutramea-dash__link{padding:.5rem .875rem;border:1px solid var(--nm-line);
+				border-radius:8px;font-size:.8125rem;font-weight:600;
+				color:inherit;text-decoration:none;opacity:.85}
+			.nutramea-dash__link:hover{opacity:1;border-color:rgba(255,255,255,.22)}
+			@media(max-width:620px){.nutramea-dash__cta{display:block;text-align:center}}
+			.nutramea-meet{margin:0 0 1.5rem}
+			.nutramea-meet__frame{width:100%;height:min(78vh,820px);min-height:560px;border:0;
+				border-radius:12px;background:#0a0c0b;display:block}
+			.nutramea-meet__note{margin-top:.75rem;font-size:.85rem;line-height:1.5;opacity:.75}
+			.nutramea-meet__gate{padding:1.5rem;border:1px solid rgba(0,0,0,.12);border-radius:12px}
+			@media(max-width:782px){.nutramea-meet__frame{height:min(72vh,640px);min-height:480px}}
+			
+</style></head><body>
+<div class="site-header"><b>Nutra<i>MEA</i></b><span style="opacity:.6;font-size:13px">Intelligence</span></div>
+<div class="wrap">
+ <nav class="acct"><a href="#" class="on">Dashboard</a><a href="#">Meetings</a><a href="#">Orders</a><a href="#">Details</a><a href="#">Log out</a></nav>
+ <main>
+  <div class="nutramea-dash">
+   <p class="nutramea-dash__eyebrow">Member dashboard</p>
+   <h2 class="nutramea-dash__greeting">Hello, Riwana</h2>
+   <section class="nutramea-dash__feature">
+    <h3>Meetings</h3>
+    <p>Private video calls with no time limit, recorded straight to your own computer. Notes, decisions and action items are written for you.</p>
+    <a class="nutramea-dash__cta" href="#">Start a meeting</a>
+   </section>
+   <nav class="nutramea-dash__links" aria-label="Account sections">
+    <a class="nutramea-dash__link" href="#">Orders</a>
+    <a class="nutramea-dash__link" href="#">Downloads</a>
+    <a class="nutramea-dash__link" href="#">Addresses</a>
+    <a class="nutramea-dash__link" href="#">Account details</a>
+   </nav>
+  </div>
+ </main>
+</div></body></html>

@@ -1,0 +1,18 @@
+{
+  "name": "nutrameiant-site",
+  "version": "1.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NutraMEA Intelligence platform site, including member video meetings with in-browser recording and AI notes.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs && npm run test:php",
+    "lint:js": "node scripts/check-syntax.mjs",
+    "lint:php": "bash scripts/check-php.sh",
+    "check": "npm run lint:js && npm run lint:php && npm test",
+    "start": "npx http-server ./site -p 8080",
+    "test:php": "php tests/php/integration.test.php && php tests/php/auth-safety.test.php && php tests/php/standalone.test.php"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}

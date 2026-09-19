@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, 'claude/**' ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Lint and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      # Every application module must load through the real ESM loader, which
+      # catches bad import specifiers as well as syntax errors.
+      - name: Check JavaScript modules
+        run: npm run lint:js
+
+      - name: Check PHP files
+        run: npm run lint:php
+
+      - name: Unit tests (JavaScript)
+        run: node --test tests/*.test.mjs
+
+      # Executes the theme integration against WordPress stubs. Linting proves
+      # a file parses; this proves the markup, the menu de-duplication and the
+      # escaping are right. Includes the authentication-safety suite, which
+      # asserts this feature registers nothing at all on sign-in, sign-up and
+      # activation requests.
+      - name: Integration tests (WordPress)
+        run: npm run test:php

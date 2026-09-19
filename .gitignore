@@ -1,0 +1,5 @@
+node_modules/
+npm-debug.log*
+.DS_Store
+# Local-only harnesses that need a browser; not part of the shipped site.
+*.local.mjs
