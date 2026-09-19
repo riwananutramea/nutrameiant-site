@@ -115,6 +115,64 @@ jobs:
             **/.git*/**
             **/node_modules/**
 
+      # The one step a file upload cannot do on its own, automated so nobody
+      # has to hand-edit a live theme file.
+      #
+      # Safety: the original is backed up on the server before anything is
+      # written, the line is only appended when absent, the result is syntax
+      # checked here before it is sent, and if the site stops responding
+      # afterwards the original goes straight back.
+      - name: Enable the feature in functions.php
+        if: steps.creds.outputs.ready == 'true' && env.DRY_RUN != 'true'
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          THEME_DIR: ${{ secrets.THEME_PATH || '/public_html/wp-content/themes/nutramea-theme/' }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+          # ssl-force keeps the credentials off the wire in plaintext.
+          # Certificate verification is relaxed only because shared hosts
+          # commonly present a certificate for the server, not the customer's
+          # own domain.
+          OPTS="set ftp:ssl-force true; set ssl:verify-certificate no; set net:max-retries 3; set net:timeout 20"
+
+          echo "Fetching the current functions.php…"
+          lftp -c "$OPTS; open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER'; get '${THEME_DIR}functions.php' -o functions.php"
+
+          if grep -q "nutramea-meetings.php" functions.php; then
+            echo "::notice::Already enabled — functions.php left untouched."
+            exit 0
+          fi
+
+          cp functions.php functions.original.php
+          cat >> functions.php <<'PHPLINE'
+
+// NutraMEA member meetings. Delete this line to disable the feature entirely.
+require_once get_stylesheet_directory() . '/nutramea-meetings.php';
+PHPLINE
+
+          # Validate before it ever reaches the site.
+          php -l functions.php
+
+          echo "Backing up the original on the server, then writing…"
+          lftp -c "$OPTS; open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER'; \
+            put functions.original.php -o '${THEME_DIR}functions.php.nutramea-backup'; \
+            put functions.php -o '${THEME_DIR}functions.php'"
+
+          echo "Checking the site survived…"
+          sleep 8
+          code=$(curl -sS -o /dev/null -m 30 -w '%{http_code}' https://nutrameaint.com/ || echo 000)
+          if [ "$code" != "200" ]; then
+            echo "::error::Home page returned $code — restoring the original functions.php."
+            lftp -c "$OPTS; open -u '$FTP_USERNAME','$FTP_PASSWORD' '$FTP_SERVER'; put functions.original.php -o '${THEME_DIR}functions.php'"
+            echo "Original restored. The site should be back as it was."
+            exit 1
+          fi
+          echo "::notice::Feature enabled and the site is healthy."
+
       - name: Check the live page responds
         if: steps.creds.outputs.ready == 'true' && env.DRY_RUN != 'true'
         run: |
